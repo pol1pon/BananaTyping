@@ -1,0 +1,32 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DB_DATABASE=/app/data/banana_typing.sqlite
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-replace-in-production}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - AI_PROVIDER=pollinations
+    volumes:
+      # Сохранение базы данных SQLite между перезапусками
+      - sqlite_data:/app/data
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+
+volumes:
+  sqlite_data:
