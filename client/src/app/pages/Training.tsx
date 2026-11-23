@@ -60,6 +60,86 @@ const TOPICS: Record<'ru' | 'en', TopicOption[]> = {
   ]
 };
 
+/**
+ * Находит ID соответствующей кнопки темы на основе темы текста из базы данных
+ */
+function findMatchingTopicId(rawTopic: string | null | undefined, lang: 'ru' | 'en'): string {
+  if (!rawTopic) {
+    return lang === 'ru' ? "случайная тема" : "random topic";
+  }
+
+  const normalized = rawTopic.trim().toLowerCase();
+
+  // 1. Прямое совпадение с id из доступных кнопок тем
+  const availableTopics = TOPICS[lang];
+  const exactMatch = availableTopics.find((t) => t.id.toLowerCase() === normalized);
+  if (exactMatch) {
+    return exactMatch.id;
+  }
+
+  // 2. Семантическое сопоставление (учитывает темы из базы и сидов)
+  if (lang === 'ru') {
+    if (normalized.includes('банан')) {
+      return "бананы и юмор";
+    }
+    if (
+      normalized.includes('программир') ||
+      normalized.includes('код') ||
+      normalized.includes('технолог') ||
+      normalized.includes('it')
+    ) {
+      return "программирование и IT";
+    }
+    if (
+      normalized.includes('космос') ||
+      normalized.includes('наук') ||
+      normalized.includes('астроном')
+    ) {
+      return "космос и наука";
+    }
+    if (
+      normalized.includes('цитат') ||
+      normalized.includes('философ') ||
+      normalized.includes('саморазвит') ||
+      normalized.includes('продуктивн') ||
+      normalized.includes('жизнь') ||
+      normalized.includes('мысл')
+    ) {
+      return "философия и цитаты";
+    }
+    return "случайная тема";
+  } else {
+    if (normalized.includes('banana')) {
+      return "bananas and humor";
+    }
+    if (
+      normalized.includes('code') ||
+      normalized.includes('coding') ||
+      normalized.includes('program') ||
+      normalized.includes('tech') ||
+      normalized.includes('it')
+    ) {
+      return "coding and technology";
+    }
+    if (
+      normalized.includes('space') ||
+      normalized.includes('science') ||
+      normalized.includes('cosmo')
+    ) {
+      return "space and science";
+    }
+    if (
+      normalized.includes('quote') ||
+      normalized.includes('life') ||
+      normalized.includes('productiv') ||
+      normalized.includes('philosop')
+    ) {
+      return "quotes and life";
+    }
+    return "random topic";
+  }
+}
+
 // Пул предложений для непрерывного потока в бесконечном режиме и режиме на время
 const STREAMING_SENTENCES: Record<'ru' | 'en', string[]> = {
   ru: [
@@ -173,13 +253,17 @@ export function Training() {
     fetchHistory(lang);
   }, [lang, fetchRandomText, fetchHistory]);
 
-  // Синхронизация активного текста при изменении currentText
+  // Синхронизация активного текста и темы при изменении currentText / currentTopic
   useEffect(() => {
     if (currentText) {
       setActiveText(currentText);
+      if (currentTopic) {
+        const matched = findMatchingTopicId(currentTopic, lang);
+        setSelectedTopic(matched);
+      }
       reset();
     }
-  }, [currentText, reset]);
+  }, [currentText, currentTopic, lang, reset]);
 
   // Сброс при смене режима или лимита времени
   const handleSelectMode = (newMode: TrainingMode) => {
