@@ -63,32 +63,35 @@ const TOPICS: Record<'ru' | 'en', TopicOption[]> = {
 // Пул предложений для непрерывного потока в бесконечном режиме и режиме на время
 const STREAMING_SENTENCES: Record<'ru' | 'en', string[]> = {
   ru: [
-    "бананы содержат много калия и витаминов для продуктивной работы мозга",
-    "слепая печать позволяет быстро переносить любые мысли прямо на экран",
-    "каждая минута практики приближает пальцы к автоматической печати без ошибок",
-    "ритмичные движения и спокойствие помогают удерживать максимальную скорость",
-    "красивый и чистый код пишется легче когда не нужно смотреть на клавиатуру",
-    "современные технологии открывают безграничные возможности для каждого человека",
-    "терпение и регулярные тренировки превращают сложные задачи в простую привычку",
-    "свежий банановый коктейль заряжает энергией на весь продуктивный рабочий день",
-    "в бесконечной вселенной сияют миллиарды далеких звезд и неизведанных миров",
-    "высокая точность всегда важнее спешки потому что скорость приходит автоматически",
-    "хороший программист ценит понятный код и элегантные архитектурные решения",
-    "уверенность в каждом движении пальцев дает свободу полета творческой мысли"
+    "Бананы содержат много калия и витаминов для продуктивной работы мозга.",
+    "Слепая печать позволяет быстро переносить любые мысли прямо на экран.",
+    "Каждая минута практики приближает пальцы к автоматической печати без ошибок.",
+    "Ритмичные движения и спокойствие помогают удерживать максимальную скорость.",
+    "Красивый и чистый код пишется легче, когда не нужно смотреть на клавиатуру.",
+    "Современные технологии открывают безграничные возможности для каждого человека.",
+    "Терпение и регулярные тренировки превращают сложные задачи в простую привычку.",
+    "Свежий банановый коктейль заряжает энергией на весь продуктивный рабочий день.",
+    "В бесконечной Вселенной сияют миллиарды далеких звезд и неизведанных миров.",
+    "Высокая точность всегда важнее спешки, потому что скорость приходит автоматически.",
+    "Хороший программист ценит понятный код и элегантные архитектурные решения.",
+    "Уверенность в каждом движении пальцев дает свободу полета творческой мысли.",
+    "Искусственный интеллект помогает автоматизировать рутину и создавать смелые проекты.",
+    "Глубокая концентрация и расслабленные плечи сохраняют силы при долгой работе.",
+    "Мастерство слепого набора экономит сотни часов драгоценного времени каждый год."
   ],
   en: [
-    "bananas are rich in potassium and nutrients that boost cognitive function",
-    "touch typing allows your fingers to move automatically while you focus on ideas",
-    "every minute of practice brings you closer to effortless error free typing",
-    "rhythm and steady breathing are the real secrets of world class typing velocity",
-    "writing clean code feels amazing when your fingers effortlessly hit every symbol",
-    "modern technologies unlock unlimited potential for digital creators worldwide",
-    "daily deliberate training turns challenging skills into your natural superpower",
-    "a fresh smoothie in the morning provides clean natural fuel for productive days",
-    "looking up at distant stars reminds us how wondrous the universe truly is",
-    "accuracy always leads to speed because smooth rhythm beats rushing every time",
-    "great software developers value clarity simplicity and maintainable architecture",
-    "mastering touch typing saves hundreds of valuable hours every single year"
+    "Bananas are rich in potassium and nutrients that boost cognitive function.",
+    "Touch typing allows your fingers to move automatically while you focus on ideas.",
+    "Every minute of practice brings you closer to effortless, error-free typing.",
+    "Rhythm and steady breathing are the real secrets of world-class typing velocity.",
+    "Writing clean code feels amazing when your fingers effortlessly hit every symbol.",
+    "Modern technologies unlock unlimited potential for digital creators worldwide.",
+    "Daily deliberate training turns challenging skills into your natural superpower.",
+    "A fresh smoothie in the morning provides clean natural fuel for productive days.",
+    "Looking up at distant stars reminds us how wondrous the universe truly is.",
+    "Accuracy always leads to speed because smooth rhythm beats rushing every time.",
+    "Great software developers value clarity, simplicity, and maintainable architecture.",
+    "Mastering touch typing saves hundreds of valuable hours every single year."
   ]
 };
 
@@ -329,7 +332,12 @@ export function Training() {
         const pool = STREAMING_SENTENCES[lang];
         const nextSentence = pool[nextSentenceIndexRef.current % pool.length];
         nextSentenceIndexRef.current += 1;
-        setActiveText((prev) => (prev ? prev + " " + nextSentence : nextSentence));
+        setActiveText((prev) => {
+          if (!prev) return nextSentence;
+          const trimmed = prev.trim();
+          const separator = trimmed.endsWith('.') || trimmed.endsWith('!') || trimmed.endsWith('?') ? ' ' : '. ';
+          return trimmed + separator + nextSentence;
+        });
       }
 
       // В стандартном режиме ТЕКСТ: проверка завершения
@@ -422,7 +430,7 @@ export function Training() {
       const text = await generateAiText({
         language: lang,
         topic: selectedTopic,
-        length: selectedLength,
+        length: mode === 'endless' ? 'long' : selectedLength,
         difficulty: 'medium',
       });
       setActiveText(text);
