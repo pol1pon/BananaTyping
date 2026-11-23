@@ -9,7 +9,10 @@ import {
   Loader2,
   Clock,
   Infinity as InfinityIcon,
-  Square
+  Square,
+  Trophy,
+  Smartphone,
+  Keyboard
 } from "lucide-react";
 import { Link } from "react-router";
 
@@ -94,6 +97,7 @@ export function Training() {
   const { fetchLeaderboard } = useLeaderboardStore();
   const { 
     currentText, 
+    currentTextId,
     currentTopic, 
     isLoading, 
     isGenerating, 
@@ -117,10 +121,15 @@ export function Training() {
   const [activeText, setActiveText] = useState<string>("");
   const nextSentenceIndexRef = useRef(0);
 
-  // Ссылки для автопрокрутки
+  // Ссылки для автопрокрутки и фокуса
   const activeCharRef = useRef<HTMLSpanElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
+  const trainerCardRef = useRef<HTMLDivElement>(null);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
   const lastLineTopRef = useRef<number>(-1);
+  const hasAutoScrolledRef = useRef<boolean>(false);
+  const [showMobileKeyboard, setShowMobileKeyboard] = useState<boolean>(false);
+  const lastProcessedCharRef = useRef<{ char: string; time: number }>({ char: "", time: 0 });
 
   // Состояние набора текста
   const [typedChars, setTypedChars] = useState("");
@@ -133,7 +142,7 @@ export function Training() {
   // Финальные сохраненные результаты после завершения теста
   const [finalResult, setFinalResult] = useState<{ wpm: number; accuracy: number; duration: number } | null>(null);
 
-  const sampleText = activeText || currentText || (lang === 'ru' ? 'Текст уже придумывается...' : 'Text is being generated...');
+  const sampleText = activeText || currentText || "";
   const currentIndex = typedChars.length;
   const expectedChar = sampleText[currentIndex] || "";
 
@@ -149,21 +158,24 @@ export function Training() {
     setTimeLeft(timeLimit);
     nextSentenceIndexRef.current = 0;
     lastLineTopRef.current = -1;
+    hasAutoScrolledRef.current = false;
     if (textContainerRef.current) {
       textContainerRef.current.scrollTop = 0;
     }
   }, [timeLimit]);
 
-  // Первоначальная загрузка текста
+  // Первоначальная загрузка уникального текста
   useEffect(() => {
-    fetchRandomText(lang);
+    fetchRandomText(lang, currentTextId || undefined);
     fetchHistory(lang);
   }, [lang, fetchRandomText, fetchHistory]);
 
   // Синхронизация активного текста при изменении currentText
   useEffect(() => {
-    setActiveText(currentText);
-    reset();
+    if (currentText) {
+      setActiveText(currentText);
+      reset();
+    }
   }, [currentText, reset]);
 
   // Сброс при смене режима или лимита времени
@@ -222,6 +234,35 @@ export function Training() {
     }
   }, [currentIndex]);
 
+  // Функция плавного и точного переноса экрана к карточке тренажера
+  const scrollToTrainer = useCallback((behavior: ScrollBehavior = "smooth") => {
+    if (!trainerCardRef.current) return;
+    const cardRect = trainerCardRef.current.getBoundingClientRect();
+    const cardTop = cardRect.top + window.pageYOffset;
+    // Позиционируем карточку с комфортным отступом 16px сверху:
+    // статистика, набираемый текст и вся виртуальная клавиатура полностью помещаются в экран
+    const targetScroll = Math.max(0, cardTop - 16);
+
+    if (Math.abs(window.pageYOffset - targetScroll) > 16) {
+      window.scrollTo({
+        top: targetScroll,
+        behavior
+      });
+    }
+  }, []);
+
+  // Перенос экрана к карточке тренажера при старте тренировки (ровно 1 раз за сессию, без рывков)
+  useEffect(() => {
+    if (status === 'typing') {
+      if (!hasAutoScrolledRef.current) {
+        hasAutoScrolledRef.current = true;
+        scrollToTrainer("smooth");
+      }
+    } else if (status === 'idle') {
+      hasAutoScrolledRef.current = false;
+    }
+  }, [status, scrollToTrainer]);
+
   // Расчет скорости (WPM)
   const calculateWPM = useCallback(() => {
     if (!startTime || currentIndex === 0) return 0;
@@ -255,13 +296,59 @@ export function Training() {
     return `${mins}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // Обработка нажатий клавиш с поддержкой дефисов, непрерывного потока и автопродления
+  // Обработка каждого введенного символа (работает идентично для десктопа и смартфонов)
+  const processChar = useCallback((char: string) => {
+    if (status === "finished" || isLoading || isGenerating || !sampleText) return;
+    if (typedCharsRef.current.length >= sampleText.length) return;
+
+    const now = Date.now();
+    // Защита от дублирования ввода на некоторых мобильных браузерах (в пределах 30мс)
+    if (
+      lastProcessedCharRef.current.char === char &&
+      now - lastProcessedCharRef.current.time < 30
+    ) {
+      return;
+    }
+    lastProcessedCharRef.current = { char, time: now };
+
+    if (status === "idle") {
+      setStatus("typing");
+      setStartTime(now);
+    }
+
+    const currentExpected = sampleText[typedCharsRef.current.length] || "";
+
+    // Отслеживание равенства символов (включая дефис/тире — и -)
+    if (areCharsEqual(char, currentExpected)) {
+      typedCharsRef.current += currentExpected;
+      setTypedChars(typedCharsRef.current);
+      setWrongKey(null);
+
+      // В режимах НА ВРЕМЯ и БЕСКОНЕЧНЫЙ: автопополнение текста при приближении к концу
+      if (mode !== 'text' && typedCharsRef.current.length >= sampleText.length - 25) {
+        const pool = STREAMING_SENTENCES[lang];
+        const nextSentence = pool[nextSentenceIndexRef.current % pool.length];
+        nextSentenceIndexRef.current += 1;
+        setActiveText((prev) => (prev ? prev + " " + nextSentence : nextSentence));
+      }
+
+      // В стандартном режиме ТЕКСТ: проверка завершения
+      if (mode === 'text' && typedCharsRef.current.length >= sampleText.length) {
+        setStatus("finished");
+      }
+    } else {
+      setErrors((prev) => prev + 1);
+      setWrongKey(isDashChar(char) ? "-" : char.toUpperCase());
+      setTimeout(() => setWrongKey(null), 200);
+    }
+  }, [status, isLoading, isGenerating, sampleText, mode, lang]);
+
+  // Слушатель физической клавиатуры компьютера
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return;
-
-      if (e.key === " ") {
+      if (e.key === "Tab") {
         e.preventDefault();
+        return;
       }
 
       if (e.key === "Escape") {
@@ -269,48 +356,35 @@ export function Training() {
         return;
       }
 
-      if (status === "finished") return;
+      if (status === "finished" || isLoading || isGenerating || !sampleText) return;
       if (e.ctrlKey || e.altKey || e.metaKey) return;
-      if (e.key.length > 1 && e.key !== "Backspace" && e.key !== " ") return;
 
-      if (status === "idle" && e.key.length === 1) {
-        setStatus("typing");
-        setStartTime(Date.now());
-      }
-
-      if (e.key === "Backspace") return;
-      if (typedCharsRef.current.length >= sampleText.length) return;
-
-      const currentExpected = sampleText[typedCharsRef.current.length] || "";
-
-      // Отслеживание равенства символов (включая дефис/тире — и -)
-      if (areCharsEqual(e.key, currentExpected)) {
-        typedCharsRef.current += currentExpected;
-        setTypedChars(typedCharsRef.current);
-        setWrongKey(null);
-
-        // В режимах НА ВРЕМЯ и БЕСКОНЕЧНЫЙ: автопополнение текста при приближении к концу
-        if (mode !== 'text' && typedCharsRef.current.length >= sampleText.length - 25) {
-          const pool = STREAMING_SENTENCES[lang];
-          const nextSentence = pool[nextSentenceIndexRef.current % pool.length];
-          nextSentenceIndexRef.current += 1;
-          setActiveText((prev) => (prev ? prev + " " + nextSentence : nextSentence));
-        }
-
-        // В стандартном режиме ТЕКСТ: проверка завершения
-        if (mode === 'text' && typedCharsRef.current.length >= sampleText.length) {
-          setStatus("finished");
-        }
-      } else {
-        setErrors((prev) => prev + 1);
-        setWrongKey(isDashChar(e.key) ? "-" : e.key.toUpperCase());
-        setTimeout(() => setWrongKey(null), 200);
+      if (e.key.length === 1) {
+        processChar(e.key);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [status, sampleText, reset, mode, lang]);
+  }, [status, sampleText, reset, processChar, isLoading, isGenerating]);
+
+  // Обработка ввода с экранной клавиатуры мобильного устройства
+  const handleMobileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val && val.length > 0) {
+      const char = val[val.length - 1];
+      processChar(char);
+    }
+    e.target.value = "";
+  };
+
+  // Вызов нативной клавиатуры телефона по клику на область текста или тренажер
+  const focusMobileInput = useCallback(() => {
+    scrollToTrainer("smooth");
+    if (mobileInputRef.current) {
+      mobileInputRef.current.focus();
+    }
+  }, [scrollToTrainer]);
 
   // Сохранение результатов в БД при завершении
   useEffect(() => {
@@ -360,8 +434,12 @@ export function Training() {
 
   // Получение следующего случайного текста
   const handleNextRandom = async () => {
-    const text = await fetchRandomText(lang);
-    setActiveText(text);
+    try {
+      const text = await fetchRandomText(lang, currentTextId || undefined);
+      setActiveText(text);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Отображение подсвеченного текста и курсора (стабильная ширина символов, без прыжков и скачков)
@@ -393,14 +471,26 @@ export function Training() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      {/* Навигационная панель страницы */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      {/* Навигационная панель страницы (плавно затухает при наборе текста) */}
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 transition-opacity duration-300 ${
+        status === 'typing' 
+          ? 'opacity-25 hover:opacity-100' 
+          : 'opacity-100'
+      }`}>
         <div className="flex items-center gap-3 sm:gap-4">
           <Link
             to="/"
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors text-gray-500 shrink-0"
+            title="На главную"
           >
             <ArrowLeft size={18} />
+          </Link>
+          <Link
+            to="/leaderboard"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center hover:bg-yellow-50 transition-colors text-[#D97706] shrink-0"
+            title="Топ игроков по WPM"
+          >
+            <Trophy size={18} />
           </Link>
           <div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900">Режим тренировки</h1>
@@ -436,22 +526,28 @@ export function Training() {
         </div>
       </div>
 
-      {/* Панель генератора текстов и выбора режимов тренировки */}
-      <AiGeneratorBar
-        mode={mode}
-        onSelectMode={handleSelectMode}
-        timeLimit={timeLimit}
-        onSelectTimeLimit={handleSelectTimeLimit}
-        topics={TOPICS[lang]}
-        selectedTopic={selectedTopic}
-        onSelectTopic={setSelectedTopic}
-        selectedLength={selectedLength}
-        onSelectLength={setSelectedLength}
-        onGenerateAi={handleGenerateAi}
-        onNextRandom={handleNextRandom}
-        isGenerating={isGenerating}
-        isLoading={isLoading}
-      />
+      {/* Панель генератора текстов и выбора режимов тренировки (плавно затухает во время печати) */}
+      <div className={`transition-opacity duration-300 mb-6 ${
+        status === 'typing' 
+          ? 'opacity-25 hover:opacity-100' 
+          : 'opacity-100'
+      }`}>
+        <AiGeneratorBar
+          mode={mode}
+          onSelectMode={handleSelectMode}
+          timeLimit={timeLimit}
+          onSelectTimeLimit={handleSelectTimeLimit}
+          topics={TOPICS[lang]}
+          selectedTopic={selectedTopic}
+          onSelectTopic={setSelectedTopic}
+          selectedLength={selectedLength}
+          onSelectLength={setSelectedLength}
+          onGenerateAi={handleGenerateAi}
+          onNextRandom={handleNextRandom}
+          isGenerating={isGenerating}
+          isLoading={isLoading}
+        />
+      </div>
 
       {error && (
         <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-center justify-between shadow-sm">
@@ -469,7 +565,15 @@ export function Training() {
       )}
 
       {/* Основная карточка тренажера */}
-      <div className="bg-white rounded-[24px] sm:rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.06)] p-5 sm:p-8 md:p-12 flex flex-col gap-6 sm:gap-8 border border-gray-50">
+      <div
+        ref={trainerCardRef}
+        onClick={() => scrollToTrainer("smooth")}
+        className={`bg-white rounded-[24px] sm:rounded-[32px] p-5 sm:p-7 md:p-9 flex flex-col gap-5 sm:gap-7 transition-all duration-300 border ${
+          status === 'typing'
+            ? 'shadow-[0_16px_48px_rgba(255,215,0,0.22)] border-amber-300 ring-4 ring-[#FFD700]/30'
+            : 'shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-gray-100'
+        }`}
+      >
         
         {/* Метки темы и текущего режима */}
         <div className="flex flex-wrap items-center justify-between gap-3 -mb-1">
@@ -495,6 +599,12 @@ export function Training() {
             {currentTopic && (
               <span className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-[#FFD700]/20 text-gray-900">
                 Тема: {currentTopic}
+              </span>
+            )}
+            {status === 'typing' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-[#FFD700] text-[#111111] animate-pulse shadow-xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#111111]"></span>
+                <span>Фокус</span>
               </span>
             )}
           </div>
@@ -584,14 +694,45 @@ export function Training() {
           </div>
         </div>
 
-        {/* Область набираемого текста со скроллом для бесконечных потоков */}
+        {/* Мобильная подсказка для вызова экранной клавиатуры */}
+        {status === 'idle' && (
+          <div 
+            onClick={focusMobileInput}
+            className="md:hidden flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-amber-50 border border-amber-200/80 text-[#D97706] text-xs font-bold cursor-pointer active:scale-95 transition-transform -mt-1 shadow-2xs"
+          >
+            <Smartphone size={14} />
+            <span>Нажми сюда, чтобы открыть клавиатуру телефона</span>
+          </div>
+        )}
+
+        {/* Область набираемого текста */}
         <div
           ref={textContainerRef}
-          className="text-xl sm:text-2xl md:text-3xl leading-[1.6] sm:leading-[1.7] font-mono select-none outline-none tracking-normal whitespace-pre-wrap break-words min-h-[72px] sm:min-h-[96px] max-h-[180px] sm:max-h-[220px] overflow-y-auto scroll-smooth pr-1"
+          onClick={focusMobileInput}
+          className={`relative text-xl sm:text-2xl md:text-3xl leading-[1.6] sm:leading-[1.7] font-mono select-none outline-none tracking-normal whitespace-pre-wrap break-words min-h-[76px] sm:min-h-[96px] max-h-[170px] sm:max-h-[210px] overflow-y-auto scroll-smooth pr-1.5 transition-all duration-300 rounded-2xl p-2.5 sm:p-3.5 -mx-2.5 sm:-mx-3.5 cursor-text ${
+            status === 'typing'
+              ? 'bg-amber-50/40 ring-1 ring-amber-200/60'
+              : 'hover:bg-gray-50/60'
+          }`}
           tabIndex={0}
-          autoFocus
         >
-          {isLoading || isGenerating ? (
+          {/* Скрытый инпут для вызова нативной клавиатуры на мобильных устройствах */}
+          <input
+            ref={mobileInputRef}
+            type="text"
+            inputMode="text"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            autoComplete="off"
+            tabIndex={-1}
+            className="absolute inset-0 w-full h-full opacity-0 pointer-events-auto cursor-text z-10"
+            style={{ fontSize: "16px" }}
+            value=""
+            onChange={handleMobileInputChange}
+          />
+
+          {isLoading || isGenerating || !sampleText ? (
             <div className="flex items-center gap-3 text-gray-700 text-base sm:text-lg font-medium animate-pulse">
               <Loader2 size={20} className="animate-spin text-[#FFD700]" />
               <span>Текст уже придумывается...</span>
@@ -618,7 +759,11 @@ export function Training() {
               <p className="text-green-700 text-xs sm:text-sm">
                 Твоя скорость: <strong>{finalResult.wpm}</strong> сл/мин, точность:{" "}
                 <strong>{finalResult.accuracy}%</strong>, время: <strong>{finalResult.duration}</strong> сек.
-                {currentUser ? " Результат сохранен в лидерборд!" : " Авторизуйся, чтобы сохранять результаты в профиль."}
+                {currentUser ? (
+                  <span> Результат сохранен в <Link to="/leaderboard" className="underline font-bold text-green-800 hover:text-green-950">лидерборд</Link>!</span>
+                ) : (
+                  <span> <Link to="/login" className="underline font-bold text-green-800 hover:text-green-950">Авторизуйся</Link>, чтобы сохранять результаты в профиль.</span>
+                )}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
@@ -640,13 +785,27 @@ export function Training() {
           </div>
         )}
 
-        {/* Виртуальная клавиатура */}
-        <VirtualKeyboard
-          keyboardRows={KEYBOARDS[lang]}
-          expectedChar={expectedChar}
-          wrongKey={wrongKey}
-          isFinished={status === "finished"}
-        />
+        {/* Кнопка переключения клавиатуры-подсказки для мобильных экранов */}
+        <div className="md:hidden flex justify-center -my-1">
+          <button
+            type="button"
+            onClick={() => setShowMobileKeyboard(!showMobileKeyboard)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors shadow-2xs"
+          >
+            <Keyboard size={13} className="text-[#D97706]" />
+            <span>{showMobileKeyboard ? "Скрыть подсказку клавиш" : "Показать подсказку клавиш"}</span>
+          </button>
+        </div>
+
+        {/* Виртуальная клавиатура: на смартфонах скрыта по умолчанию, на десктопе всегда видна */}
+        <div className={`${showMobileKeyboard ? "block" : "hidden md:block"} w-full transition-all`}>
+          <VirtualKeyboard
+            keyboardRows={KEYBOARDS[lang]}
+            expectedChar={expectedChar}
+            wrongKey={wrongKey}
+            isFinished={status === "finished"}
+          />
+        </div>
 
         <div className="text-center text-gray-400 text-xs sm:text-sm font-medium -mt-2">
           Печатай текст на клавиатуре (дефис и тире распознаются клавишей <kbd className="bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200 text-gray-700 font-mono">-</kbd>). 

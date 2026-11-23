@@ -17,8 +17,17 @@ export class LeaderboardsService {
     return this.leaderboardRepository.save(leaderboard);
   }
 
-  findAll(): Promise<LeaderBoard[]> {
-    return this.leaderboardRepository.find({ relations: ['user'] });
+  findAll(period?: string): Promise<LeaderBoard[]> {
+    const query = this.leaderboardRepository.createQueryBuilder('leaderboard')
+      .leftJoinAndSelect('leaderboard.user', 'user')
+      .orderBy('leaderboard.wpm', 'DESC');
+
+    if (period === 'daily') {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      query.where('leaderboard.createdAt >= :oneDayAgo', { oneDayAgo });
+    }
+
+    return query.getMany();
   }
 
   findOne(id: number): Promise<LeaderBoard | null> {

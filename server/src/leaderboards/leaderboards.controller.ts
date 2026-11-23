@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Delete, Put, ParseIntPipe, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { LeaderboardsService } from './leaderboards.service';
 import { CreateLeaderboardDto } from './dto/create-leaderboard.dto';
 import { UpdateLeaderboardDto } from './dto/update-leaderboard.dto';
@@ -20,9 +20,10 @@ export class LeaderboardsController {
 
   @Get()
   @ApiOperation({ summary: 'Get all leaderboard entries' })
+  @ApiQuery({ name: 'period', required: false, enum: ['daily', 'all'], description: 'Фильтр по периоду (daily - за 24 часа, all - за все время)' })
   @ApiResponse({ status: 200, description: 'List of all entries', type: [LeaderBoard] })
-  findAll(): Promise<LeaderBoard[]> {
-    return this.leaderboardsService.findAll();
+  findAll(@Query('period') period?: string): Promise<LeaderBoard[]> {
+    return this.leaderboardsService.findAll(period);
   }
 
   @Get(':id')

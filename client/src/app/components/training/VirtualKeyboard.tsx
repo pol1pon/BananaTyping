@@ -22,7 +22,10 @@ export function VirtualKeyboard({
   const normalizedWrongKey = wrongKey && isDashChar(wrongKey) ? "-" : wrongKey;
 
   return (
-    <div className="w-full flex flex-col gap-1 sm:gap-2 md:gap-2.5 items-center bg-gray-50/90 border border-gray-100 p-2.5 sm:p-5 md:p-7 rounded-[20px] sm:rounded-[24px] max-w-full overflow-x-auto">
+    <div
+      data-keyboard-container
+      className="w-full flex flex-col gap-1 sm:gap-2 md:gap-2.5 items-center bg-gray-50/90 border border-gray-100 p-2.5 sm:p-5 md:p-7 rounded-[20px] sm:rounded-[24px] max-w-full overflow-x-auto"
+    >
       {/* Ряды букв, цифр и знаков */}
       {keyboardRows.map((row, rowIndex) => (
         <div key={rowIndex} className="flex gap-0.5 sm:gap-1.5 md:gap-2 w-full justify-center max-w-full">

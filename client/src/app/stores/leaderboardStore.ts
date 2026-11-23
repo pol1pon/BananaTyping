@@ -23,7 +23,7 @@ interface LeaderboardState {
   isLoading: boolean;
   error: string | null;
 
-  fetchLeaderboard: () => Promise<void>;
+  fetchLeaderboard: (period?: 'daily' | 'all') => Promise<void>;
 }
 
 export const useLeaderboardStore = create<LeaderboardState>((set) => ({
@@ -31,11 +31,12 @@ export const useLeaderboardStore = create<LeaderboardState>((set) => ({
   isLoading: false,
   error: null,
 
-  fetchLeaderboard: async () => {
+  fetchLeaderboard: async (period?: 'daily' | 'all') => {
     set({ isLoading: true, error: null });
     try {
       const response = await leaderboardsControllerFindAll({
         client,
+        query: period ? { period } : undefined,
       });
 
       if (response.error) {
@@ -45,7 +46,7 @@ export const useLeaderboardStore = create<LeaderboardState>((set) => ({
       let data = (response.data as unknown as LeaderboardEntry[]) || [];
       data.sort((a, b) => b.wpm - a.wpm);
 
-      const topPlayers = data.slice(0, 50);
+      const topPlayers = data.slice(0, 100);
 
       set({ entries: topPlayers, isLoading: false });
     } catch (err: any) {

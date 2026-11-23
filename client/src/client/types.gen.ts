@@ -89,6 +89,7 @@ export type TextsControllerRandomData = {
     path?: never;
     query?: {
         language?: 'ru' | 'en' | string;
+        excludeId?: number;
     };
     url: '/texts/random';
 };
@@ -386,7 +387,9 @@ export type TextsControllerUpdateResponse = TextsControllerUpdateResponses[keyof
 export type LeaderboardsControllerFindAllData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        period?: 'daily' | 'all' | string;
+    };
     url: '/leaderboards';
 };
 

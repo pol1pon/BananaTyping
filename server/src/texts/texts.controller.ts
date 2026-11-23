@@ -22,9 +22,13 @@ export class TextsController {
   @Get('random')
   @ApiOperation({ summary: 'Получить случайный текст из базы данных (с автогенерацией если база пуста)' })
   @ApiQuery({ name: 'language', required: false, enum: ['ru', 'en'], description: 'Язык текста' })
+  @ApiQuery({ name: 'excludeId', required: false, type: Number, description: 'ID текста для исключения из выборки' })
   @ApiResponse({ status: 200, description: 'Случайный текст получен', type: Text })
-  getRandom(@Query('language') language?: string): Promise<Text> {
-    return this.textsService.getRandom(language);
+  getRandom(
+    @Query('language') language?: string,
+    @Query('excludeId') excludeId?: string,
+  ): Promise<Text> {
+    return this.textsService.getRandom(language, excludeId ? Number(excludeId) : undefined);
   }
 
   @Post()
