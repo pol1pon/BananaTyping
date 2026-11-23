@@ -907,7 +907,10 @@ export function Training() {
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <button
-                onClick={handleGenerateAi}
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  handleGenerateAi();
+                }}
                 disabled={isGenerating}
                 className="bg-[#111111] hover:bg-gray-800 text-[#FFD700] font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 whitespace-nowrap text-xs sm:text-sm active:scale-95 disabled:opacity-50"
               >
@@ -915,7 +918,10 @@ export function Training() {
                 <span>Сгенерировать с ИИ</span>
               </button>
               <button
-                onClick={handleNextRandom}
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  handleNextRandom();
+                }}
                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-xl transition-colors whitespace-nowrap shadow-sm text-xs sm:text-sm active:scale-95 text-center"
               >
                 Следующий текст

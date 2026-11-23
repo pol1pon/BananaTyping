@@ -26,6 +26,9 @@ export function Footer() {
           <Link to="/training" className="hover:text-[#FFD700] transition-colors">
             Тренажер
           </Link>
+          <Link to="/leaderboard" className="hover:text-[#FFD700] transition-colors">
+            Топ игроков
+          </Link>
           <Link to="/profile" className="hover:text-[#FFD700] transition-colors">
             Личный кабинет
           </Link>

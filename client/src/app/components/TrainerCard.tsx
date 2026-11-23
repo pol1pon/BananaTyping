@@ -74,20 +74,13 @@ export function TrainerCard() {
     inputRef.current?.focus();
   };
 
-  // Обработка ввода клавиш
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Обработка символа (для физической и мобильной клавиатуры)
+  const processKey = (char: string) => {
     if (isFinished) return;
-    if (e.ctrlKey || e.altKey || e.metaKey) return;
-
-    if (e.key === "Escape") {
-      handleReset();
-      return;
-    }
-
-    if (e.key.length !== 1 && e.key !== " ") return;
+    if (char.length !== 1 && char !== " ") return;
 
     // Подсветка нажатой клавиши на виртуальной клавиатуре
-    const upperKey = e.key === " " ? "␣" : e.key.toUpperCase();
+    const upperKey = char === " " ? "␣" : char.toUpperCase();
     setPressedKey(upperKey);
     setTimeout(() => setPressedKey(null), 150);
 
@@ -99,7 +92,7 @@ export function TrainerCard() {
     const expected = sampleText[typedCharsRef.current.length];
     if (!expected) return;
 
-    if (areCharsEqual(e.key, expected)) {
+    if (areCharsEqual(char, expected)) {
       const nextTyped = typedCharsRef.current + expected;
       typedCharsRef.current = nextTyped;
       setTypedChars(nextTyped);
@@ -110,6 +103,33 @@ export function TrainerCard() {
     } else {
       setErrors((prev) => prev + 1);
     }
+  };
+
+  // Обработка ввода с физической клавиатуры
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isFinished) return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+    if (e.key === "Escape") {
+      handleReset();
+      return;
+    }
+
+    if (e.key === " ") {
+      e.preventDefault();
+    }
+
+    processKey(e.key);
+  };
+
+  // Обработка ввода с мобильной клавиатуры
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val && val.length > 0) {
+      const char = val[val.length - 1];
+      processKey(char);
+    }
+    e.target.value = "";
   };
 
   // Форматирование времени
@@ -135,12 +155,18 @@ export function TrainerCard() {
       <input
         ref={inputRef}
         type="text"
+        inputMode="text"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        autoComplete="off"
         value=""
-        onChange={() => {}}
+        onChange={handleInputChange}
         onKeyDown={handleKeyDown}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        className="opacity-0 absolute top-0 left-0 w-1 h-1 pointer-events-none"
+        className="opacity-0 absolute inset-0 w-full h-full pointer-events-none cursor-text z-10"
+        style={{ fontSize: "16px" }}
         aria-label="Ввод текста для тренажера"
       />
 
