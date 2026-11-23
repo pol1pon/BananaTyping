@@ -34,7 +34,7 @@ export function SavedTextsModal({
           <div className="flex items-center gap-2">
             <Database size={20} className="text-[#FFD700]" />
             <h2 className="text-xl font-bold text-gray-900">
-              База текстов в SQLite ({texts.length})
+              Библиотека текстов ({texts.length})
             </h2>
           </div>
           <button
@@ -62,7 +62,7 @@ export function SavedTextsModal({
           {filteredTexts.length === 0 ? (
             <div className="text-center py-10 text-gray-400 text-sm">
               {texts.length === 0
-                ? "В базе SQLite пока нет текстов. Сгенерируйте через ИИ!"
+                ? "В библиотеке пока нет текстов. Сгенерируйте через ИИ!"
                 : "Ничего не найдено по вашему запросу."}
             </div>
           ) : (
@@ -89,7 +89,7 @@ export function SavedTextsModal({
                         </span>
                       )}
                       <span className="text-[11px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded font-medium">
-                        {item.source || "sqlite"}
+                        {item.source || "сохранен"}
                       </span>
                     </div>
                   </div>

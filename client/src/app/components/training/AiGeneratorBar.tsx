@@ -1,5 +1,8 @@
 import React from "react";
-import { Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { Sparkles, RefreshCw, Loader2, Clock, FileText, Infinity as InfinityIcon } from "lucide-react";
+
+export type TrainingMode = "text" | "time" | "endless";
+export type TimeLimit = 15 | 30 | 60 | 120;
 
 export interface TopicOption {
   id: string;
@@ -7,11 +10,15 @@ export interface TopicOption {
 }
 
 interface AiGeneratorBarProps {
+  mode: TrainingMode;
+  onSelectMode: (mode: TrainingMode) => void;
+  timeLimit: TimeLimit;
+  onSelectTimeLimit: (limit: TimeLimit) => void;
+  selectedLength: "short" | "medium" | "long";
+  onSelectLength: (length: "short" | "medium" | "long") => void;
   topics: TopicOption[];
   selectedTopic: string;
   onSelectTopic: (topic: string) => void;
-  selectedLength: "short" | "medium" | "long";
-  onSelectLength: (length: "short" | "medium" | "long") => void;
   onGenerateAi: () => void;
   onNextRandom: () => void;
   isGenerating: boolean;
@@ -19,27 +26,81 @@ interface AiGeneratorBarProps {
 }
 
 export function AiGeneratorBar({
+  mode,
+  onSelectMode,
+  timeLimit,
+  onSelectTimeLimit,
+  selectedLength,
+  onSelectLength,
   topics,
   selectedTopic,
   onSelectTopic,
-  selectedLength,
-  onSelectLength,
   onGenerateAi,
   onNextRandom,
   isGenerating,
   isLoading,
 }: AiGeneratorBarProps) {
   return (
-    <div className="bg-gradient-to-r from-amber-500/10 via-yellow-400/10 to-amber-300/10 border border-yellow-200/60 rounded-[20px] sm:rounded-[24px] p-3.5 sm:p-5 mb-6 shadow-sm">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        
-        {/* Выбор тематики */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-gray-900 font-bold text-xs sm:text-sm">
-            <Sparkles size={16} className="text-[#D97706] shrink-0" />
-            <span>Генератор текстов через бесплатную нейросеть (AI)</span>
-          </div>
+    <div className="bg-gradient-to-r from-amber-500/10 via-yellow-400/10 to-amber-300/10 border border-yellow-200/60 rounded-[20px] sm:rounded-[24px] p-3.5 sm:p-5 mb-6 shadow-sm flex flex-col gap-3.5">
+      {/* 1. Верхний ряд: Переключатель режимов тренировки */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-yellow-200/50 pb-3">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span className="text-[11px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider mr-1">
+            Режим:
+          </span>
 
+          {/* Режим: Текст */}
+          <button
+            onClick={() => onSelectMode("text")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
+              mode === "text"
+                ? "bg-[#111111] text-[#FFD700] shadow-sm"
+                : "bg-white/80 hover:bg-white text-gray-700 border border-yellow-100"
+            }`}
+          >
+            <FileText size={13} />
+            <span>Текст</span>
+          </button>
+
+          {/* Режим: На время */}
+          <button
+            onClick={() => onSelectMode("time")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
+              mode === "time"
+                ? "bg-[#111111] text-[#FFD700] shadow-sm"
+                : "bg-white/80 hover:bg-white text-gray-700 border border-yellow-100"
+            }`}
+          >
+            <Clock size={13} />
+            <span>На время</span>
+          </button>
+
+          {/* Режим: Бесконечный */}
+          <button
+            onClick={() => onSelectMode("endless")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
+              mode === "endless"
+                ? "bg-[#111111] text-[#FFD700] shadow-sm"
+                : "bg-white/80 hover:bg-white text-gray-700 border border-yellow-100"
+            }`}
+          >
+            <InfinityIcon size={14} />
+            <span>Бесконечный</span>
+          </button>
+        </div>
+
+        {/* Подсказка текущего режима */}
+        <div className="text-[11px] font-medium text-gray-500 hidden md:block">
+          {mode === "text" && "Отработка цельного текста выбранной длины"}
+          {mode === "time" && `Тест на скорость с таймером на ${timeLimit} сек`}
+          {mode === "endless" && "Непрерывный поток текста без ограничения по времени"}
+        </div>
+      </div>
+
+      {/* 2. Нижний ряд: Тематика, параметры режима и кнопка генерации */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* Выбор тематики текста */}
+        <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] sm:text-xs text-gray-500 mr-1">Тема:</span>
             {topics.map((topic) => (
@@ -58,27 +119,56 @@ export function AiGeneratorBar({
           </div>
         </div>
 
-        {/* Длина и кнопки действий */}
+        {/* Настройки режима и кнопки генерации */}
         <div className="flex flex-wrap items-center gap-2 sm:self-end lg:self-center w-full sm:w-auto">
-          {/* Переключатель длины текста */}
-          <div className="flex items-center bg-white/90 rounded-xl p-1 border border-yellow-200 text-xs">
-            {(["short", "medium", "long"] as const).map((len) => {
-              const labels = { short: "Короткий", medium: "Средний", long: "Длинный" };
-              return (
+          {/* В режиме ТЕКСТ: переключатель длины */}
+          {mode === "text" && (
+            <div className="flex items-center bg-white/90 rounded-xl p-1 border border-yellow-200 text-xs">
+              {(["short", "medium", "long"] as const).map((len) => {
+                const labels = { short: "Короткий", medium: "Средний", long: "Длинный" };
+                return (
+                  <button
+                    key={len}
+                    onClick={() => onSelectLength(len)}
+                    className={`px-2 sm:px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                      selectedLength === len
+                        ? "bg-[#FFD700] text-black font-bold"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    {labels[len]}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* В режиме НА ВРЕМЯ: выбор лимита секунд */}
+          {mode === "time" && (
+            <div className="flex items-center bg-white/90 rounded-xl p-1 border border-yellow-200 text-xs">
+              {([15, 30, 60, 120] as const).map((sec) => (
                 <button
-                  key={len}
-                  onClick={() => onSelectLength(len)}
+                  key={sec}
+                  onClick={() => onSelectTimeLimit(sec)}
                   className={`px-2 sm:px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                    selectedLength === len
+                    timeLimit === sec
                       ? "bg-[#FFD700] text-black font-bold"
                       : "text-gray-600 hover:text-gray-900"
                   }`}
                 >
-                  {labels[len]}
+                  {sec}с
                 </button>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {/* В режиме БЕСКОНЕЧНЫЙ: бейдж непрерывности */}
+          {mode === "endless" && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 border border-yellow-200 text-xs font-bold text-gray-700">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+              <span>Поток без остановок</span>
+            </div>
+          )}
 
           {/* Кнопка генерации нейросетью */}
           <button
@@ -89,7 +179,7 @@ export function AiGeneratorBar({
             {isGenerating ? (
               <>
                 <Loader2 size={15} className="animate-spin text-[#FFD700]" />
-                <span>Нейросеть пишет...</span>
+                <span>ИИ пишет...</span>
               </>
             ) : (
               <>
@@ -99,18 +189,17 @@ export function AiGeneratorBar({
             )}
           </button>
 
-          {/* Кнопка получения случайного текста из SQLite */}
+          {/* Кнопка получения следующего случайного текста */}
           <button
             onClick={onNextRandom}
             disabled={isLoading || isGenerating}
             className="flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 disabled:opacity-50"
-            title="Взять случайный сохраненный текст из базы SQLite"
+            title="Получить другой готовый текст"
           >
             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            <span>Из базы</span>
+            <span>Случайный</span>
           </button>
         </div>
-
       </div>
     </div>
   );

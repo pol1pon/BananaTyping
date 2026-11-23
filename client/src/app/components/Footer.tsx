@@ -14,7 +14,7 @@ export function Footer() {
             <span className="font-extrabold text-lg tracking-wide">BananaTyping</span>
           </Link>
           <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
-            Современный тренажер слепой десятипальцевой печати с генерацией текстов через бесплатную нейросеть и базой SQLite.
+            Современный тренажер слепой десятипальцевой печати с умной генерацией текстов через ИИ и персональной аналитикой прогресса.
           </p>
         </div>
 

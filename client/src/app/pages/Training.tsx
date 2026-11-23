@@ -5,9 +5,11 @@ import {
   Target, 
   ArrowLeft, 
   Sparkles, 
-  Database, 
   CheckCircle2, 
-  Loader2 
+  Loader2,
+  Clock,
+  Infinity as InfinityIcon,
+  Square
 } from "lucide-react";
 import { Link } from "react-router";
 
@@ -17,8 +19,12 @@ import { useTextStore } from "../stores/textStore";
 import { leaderboardsControllerCreate } from "../../client/sdk.gen";
 
 import { VirtualKeyboard } from "../components/training/VirtualKeyboard";
-import { SavedTextsModal } from "../components/training/SavedTextsModal";
-import { AiGeneratorBar, type TopicOption } from "../components/training/AiGeneratorBar";
+import { 
+  AiGeneratorBar, 
+  type TopicOption, 
+  type TrainingMode, 
+  type TimeLimit 
+} from "../components/training/AiGeneratorBar";
 import { areCharsEqual, isDashChar } from "../utils/charMatching";
 
 const KEYBOARDS: Record<'ru' | 'en', string[][]> = {
@@ -51,26 +57,70 @@ const TOPICS: Record<'ru' | 'en', TopicOption[]> = {
   ]
 };
 
+// Пул предложений для непрерывного потока в бесконечном режиме и режиме на время
+const STREAMING_SENTENCES: Record<'ru' | 'en', string[]> = {
+  ru: [
+    "бананы содержат много калия и витаминов для продуктивной работы мозга",
+    "слепая печать позволяет быстро переносить любые мысли прямо на экран",
+    "каждая минута практики приближает пальцы к автоматической печати без ошибок",
+    "ритмичные движения и спокойствие помогают удерживать максимальную скорость",
+    "красивый и чистый код пишется легче когда не нужно смотреть на клавиатуру",
+    "современные технологии открывают безграничные возможности для каждого человека",
+    "терпение и регулярные тренировки превращают сложные задачи в простую привычку",
+    "свежий банановый коктейль заряжает энергией на весь продуктивный рабочий день",
+    "в бесконечной вселенной сияют миллиарды далеких звезд и неизведанных миров",
+    "высокая точность всегда важнее спешки потому что скорость приходит автоматически",
+    "хороший программист ценит понятный код и элегантные архитектурные решения",
+    "уверенность в каждом движении пальцев дает свободу полета творческой мысли"
+  ],
+  en: [
+    "bananas are rich in potassium and nutrients that boost cognitive function",
+    "touch typing allows your fingers to move automatically while you focus on ideas",
+    "every minute of practice brings you closer to effortless error free typing",
+    "rhythm and steady breathing are the real secrets of world class typing velocity",
+    "writing clean code feels amazing when your fingers effortlessly hit every symbol",
+    "modern technologies unlock unlimited potential for digital creators worldwide",
+    "daily deliberate training turns challenging skills into your natural superpower",
+    "a fresh smoothie in the morning provides clean natural fuel for productive days",
+    "looking up at distant stars reminds us how wondrous the universe truly is",
+    "accuracy always leads to speed because smooth rhythm beats rushing every time",
+    "great software developers value clarity simplicity and maintainable architecture",
+    "mastering touch typing saves hundreds of valuable hours every single year"
+  ]
+};
+
 export function Training() {
   const { currentUser, fetchUserResults } = useAuthStore();
   const { fetchLeaderboard } = useLeaderboardStore();
   const { 
     currentText, 
     currentTopic, 
-    currentSource, 
     isLoading, 
     isGenerating, 
-    history,
+    error,
     fetchRandomText, 
     generateAiText, 
     fetchHistory,
-    selectTextFromHistory 
+    clearError
   } = useTextStore();
 
   const [lang, setLang] = useState<'ru' | 'en'>('ru');
   const [selectedTopic, setSelectedTopic] = useState<string>("бананы и юмор");
   const [selectedLength, setSelectedLength] = useState<'short' | 'medium' | 'long'>('medium');
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  // Режимы тренировки: обычный текст, на время, бесконечный
+  const [mode, setMode] = useState<TrainingMode>('text');
+  const [timeLimit, setTimeLimit] = useState<TimeLimit>(30);
+  const [timeLeft, setTimeLeft] = useState<number>(30);
+
+  // Динамический поток текста
+  const [activeText, setActiveText] = useState<string>("");
+  const nextSentenceIndexRef = useRef(0);
+
+  // Ссылки для автопрокрутки
+  const activeCharRef = useRef<HTMLSpanElement>(null);
+  const textContainerRef = useRef<HTMLDivElement>(null);
+  const lastLineTopRef = useRef<number>(-1);
 
   // Состояние набора текста
   const [typedChars, setTypedChars] = useState("");
@@ -83,7 +133,7 @@ export function Training() {
   // Финальные сохраненные результаты после завершения теста
   const [finalResult, setFinalResult] = useState<{ wpm: number; accuracy: number; duration: number } | null>(null);
 
-  const sampleText = currentText || (lang === 'ru' ? 'Текст загружается...' : 'Loading text...');
+  const sampleText = activeText || currentText || (lang === 'ru' ? 'Текст уже придумывается...' : 'Text is being generated...');
   const currentIndex = typedChars.length;
   const expectedChar = sampleText[currentIndex] || "";
 
@@ -96,44 +146,118 @@ export function Training() {
     setStatus("idle");
     setWrongKey(null);
     setFinalResult(null);
-  }, []);
+    setTimeLeft(timeLimit);
+    nextSentenceIndexRef.current = 0;
+    lastLineTopRef.current = -1;
+    if (textContainerRef.current) {
+      textContainerRef.current.scrollTop = 0;
+    }
+  }, [timeLimit]);
 
-  // Первоначальная загрузка текста и истории из SQLite
+  // Первоначальная загрузка текста
   useEffect(() => {
     fetchRandomText(lang);
     fetchHistory(lang);
   }, [lang, fetchRandomText, fetchHistory]);
 
-  // Сброс при изменении текущего текста
+  // Синхронизация активного текста при изменении currentText
   useEffect(() => {
+    setActiveText(currentText);
     reset();
   }, [currentText, reset]);
+
+  // Сброс при смене режима или лимита времени
+  const handleSelectMode = (newMode: TrainingMode) => {
+    setMode(newMode);
+    reset();
+  };
+
+  const handleSelectTimeLimit = (newLimit: TimeLimit) => {
+    setTimeLimit(newLimit);
+    setTimeLeft(newLimit);
+    reset();
+  };
+
+  // Таймер обратного отсчета для режима НА ВРЕМЯ
+  useEffect(() => {
+    if (mode !== 'time' || status !== 'typing' || !startTime) return;
+
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, timeLimit - elapsed);
+      setTimeLeft(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        setStatus('finished');
+      }
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, [mode, status, startTime, timeLimit]);
+
+  // Плавная автопрокрутка текста строго при переходе на новую строку (без рывков)
+  useEffect(() => {
+    if (activeCharRef.current && textContainerRef.current) {
+      const container = textContainerRef.current;
+      const element = activeCharRef.current;
+      const currentTop = element.offsetTop;
+
+      if (lastLineTopRef.current === -1) {
+        lastLineTopRef.current = currentTop;
+        return;
+      }
+
+      // Прокручиваем только тогда, когда курсор действительно перешел на следующую строку
+      if (currentTop !== lastLineTopRef.current) {
+        lastLineTopRef.current = currentTop;
+        const relativeTop = currentTop - container.offsetTop;
+        if (relativeTop > 60) {
+          container.scrollTo({
+            top: Math.max(0, relativeTop - 36),
+            behavior: "smooth",
+          });
+        }
+      }
+    }
+  }, [currentIndex]);
 
   // Расчет скорости (WPM)
   const calculateWPM = useCallback(() => {
     if (!startTime || currentIndex === 0) return 0;
-    const timeElapsedMin = (Date.now() - startTime) / 60000;
+    const timeElapsedSec = mode === 'time' && status === 'finished'
+      ? timeLimit
+      : Math.max(1, (Date.now() - startTime) / 1000);
+    const timeElapsedMin = timeElapsedSec / 60;
     const wordsTyped = currentIndex / 5;
     return Math.round(wordsTyped / timeElapsedMin);
-  }, [startTime, currentIndex]);
+  }, [startTime, currentIndex, mode, status, timeLimit]);
 
   // Расчет точности (%)
   const calculateAccuracy = useCallback(() => {
     if (currentIndex === 0 && errors === 0) return 100;
     const totalKeystrokes = currentIndex + errors;
+    if (totalKeystrokes === 0) return 100;
     return Math.round((currentIndex / totalKeystrokes) * 100);
   }, [currentIndex, errors]);
 
   // Расчет длительности (сек)
   const calculateDurationSec = useCallback(() => {
     if (!startTime) return 0;
+    if (mode === 'time' && status === 'finished') return timeLimit;
     return Math.round((Date.now() - startTime) / 1000);
-  }, [startTime]);
+  }, [startTime, mode, status, timeLimit]);
 
-  // Обработка нажатий клавиш с умным отслеживанием дефисов/тире
+  // Форматирование времени в мин:сек
+  const formatDuration = (sec: number) => {
+    const mins = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${mins}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  // Обработка нажатий клавиш с поддержкой дефисов, непрерывного потока и автопродления
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (showHistoryModal) return;
       if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return;
 
       if (e.key === " ") {
@@ -165,8 +289,16 @@ export function Training() {
         setTypedChars(typedCharsRef.current);
         setWrongKey(null);
 
-        // Проверка завершения текста
-        if (typedCharsRef.current.length === sampleText.length) {
+        // В режимах НА ВРЕМЯ и БЕСКОНЕЧНЫЙ: автопополнение текста при приближении к концу
+        if (mode !== 'text' && typedCharsRef.current.length >= sampleText.length - 25) {
+          const pool = STREAMING_SENTENCES[lang];
+          const nextSentence = pool[nextSentenceIndexRef.current % pool.length];
+          nextSentenceIndexRef.current += 1;
+          setActiveText((prev) => (prev ? prev + " " + nextSentence : nextSentence));
+        }
+
+        // В стандартном режиме ТЕКСТ: проверка завершения
+        if (mode === 'text' && typedCharsRef.current.length >= sampleText.length) {
           setStatus("finished");
         }
       } else {
@@ -178,7 +310,7 @@ export function Training() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [status, sampleText, showHistoryModal, reset]);
+  }, [status, sampleText, reset, mode, lang]);
 
   // Сохранение результатов в БД при завершении
   useEffect(() => {
@@ -189,7 +321,7 @@ export function Training() {
     const duration = calculateDurationSec();
     setFinalResult({ wpm, accuracy, duration });
 
-    if (currentUser) {
+    if (currentUser && wpm > 0) {
       leaderboardsControllerCreate({
         body: {
           userId: Number(currentUser.id),
@@ -210,52 +342,50 @@ export function Training() {
     reset();
   };
 
-  // Запуск генерации через бесплатную нейросеть
+  // Запуск генерации через ИИ
   const handleGenerateAi = async () => {
     try {
-      await generateAiText({
+      const text = await generateAiText({
         language: lang,
         topic: selectedTopic,
         length: selectedLength,
         difficulty: 'medium',
       });
+      setActiveText(text);
       await fetchHistory(lang);
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Получение следующего случайного текста из SQLite
+  // Получение следующего случайного текста
   const handleNextRandom = async () => {
-    await fetchRandomText(lang);
+    const text = await fetchRandomText(lang);
+    setActiveText(text);
   };
 
-  // Отображение подсвеченного текста и курсора
+  // Отображение подсвеченного текста и курсора (стабильная ширина символов, без прыжков и скачков)
   const renderTextStream = () => {
     return sampleText.split("").map((char, index) => {
-      if (index < currentIndex) {
-        return (
-          <span key={index} className="text-gray-900 font-bold">
-            {char}
-          </span>
-        );
-      }
-
-      if (index === currentIndex) {
-        const isSpace = char === " ";
-        return (
-          <span key={index} className="bg-[#FFD700]/30 rounded-sm text-gray-900 relative font-bold">
-            <span className="relative inline-block min-w-[0.4em]">
-              {isSpace ? "␣" : char}
-              <span className="absolute bottom-[-2px] left-0 w-full h-[3px] bg-[#FFD700] animate-pulse"></span>
-            </span>
-          </span>
-        );
-      }
+      const isTyped = index < currentIndex;
+      const isActive = index === currentIndex;
 
       return (
-        <span key={index} className="text-gray-400">
+        <span
+          key={index}
+          ref={isActive ? activeCharRef : undefined}
+          className={`relative inline font-mono transition-colors duration-75 ${
+            isTyped
+              ? "text-gray-900 font-medium"
+              : isActive
+              ? "bg-[#FFD700] text-[#111111] font-medium rounded-xs shadow-xs"
+              : "text-gray-300 font-medium"
+          }`}
+        >
           {char}
+          {isActive && (
+            <span className="absolute bottom-[-2px] left-0 w-full h-[3px] bg-[#D97706] rounded-full animate-pulse"></span>
+          )}
         </span>
       );
     });
@@ -275,21 +405,12 @@ export function Training() {
           <div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900">Режим тренировки</h1>
             <p className="text-xs sm:text-sm text-gray-500">
-              Практикуй слепую печать с текстами из SQLite и генерацией через ИИ
+              Практикуй слепую печать с умной генерацией текстов через ИИ
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <button
-            onClick={() => setShowHistoryModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
-            title="Открыть сохраненные тексты в SQLite"
-          >
-            <Database size={15} className="text-[#FFD700]" />
-            <span>База ({history.length})</span>
-          </button>
-
           <div className="flex items-center bg-white rounded-xl shadow-sm border border-gray-100 p-1">
             <button
               onClick={() => handleLangChange('ru')}
@@ -315,8 +436,12 @@ export function Training() {
         </div>
       </div>
 
-      {/* Панель управления бесплатной нейросетью */}
+      {/* Панель генератора текстов и выбора режимов тренировки */}
       <AiGeneratorBar
+        mode={mode}
+        onSelectMode={handleSelectMode}
+        timeLimit={timeLimit}
+        onSelectTimeLimit={handleSelectTimeLimit}
         topics={TOPICS[lang]}
         selectedTopic={selectedTopic}
         onSelectTopic={setSelectedTopic}
@@ -328,15 +453,44 @@ export function Training() {
         isLoading={isLoading}
       />
 
+      {error && (
+        <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-amber-600">Внимание:</span>
+            <span>{error}</span>
+          </div>
+          <button
+            onClick={clearError}
+            className="text-amber-500 hover:text-amber-800 font-bold px-2 py-1 rounded-lg transition-colors text-xs"
+          >
+            ✕ Закрыть
+          </button>
+        </div>
+      )}
+
       {/* Основная карточка тренажера */}
       <div className="bg-white rounded-[24px] sm:rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.06)] p-5 sm:p-8 md:p-12 flex flex-col gap-6 sm:gap-8 border border-gray-50">
         
-        {/* Метки источника и темы текста */}
+        {/* Метки темы и текущего режима */}
         <div className="flex flex-wrap items-center justify-between gap-3 -mb-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-gray-100 text-gray-700">
-              <Database size={12} className="text-gray-500" />
-              SQLite: {currentSource || 'сохранен'}
+              {mode === 'time' ? (
+                <>
+                  <Clock size={12} className="text-[#D97706]" />
+                  <span>Режим: На время ({timeLimit}с)</span>
+                </>
+              ) : mode === 'endless' ? (
+                <>
+                  <InfinityIcon size={12} className="text-[#D97706]" />
+                  <span>Режим: Бесконечный</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={12} className="text-[#D97706]" />
+                  <span>Режим: Текст</span>
+                </>
+              )}
             </span>
             {currentTopic && (
               <span className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-[#FFD700]/20 text-gray-900">
@@ -344,12 +498,15 @@ export function Training() {
               </span>
             )}
           </div>
-          <span className="text-xs text-gray-400">Символов: {sampleText.length}</span>
+          <span className="text-xs text-gray-400">
+            {mode === 'endless' ? `Набрано: ${currentIndex} симв.` : `Символов: ${sampleText.length}`}
+          </span>
         </div>
 
         {/* Панель статистики в реальном времени */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-5 sm:pb-6">
           <div className="flex gap-6 sm:gap-10">
+            {/* Скорость WPM */}
             <div className="flex items-center gap-2.5 sm:gap-4">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
                 <Zap size={20} className={status === 'typing' ? "text-[#FFD700]" : ""} />
@@ -365,6 +522,7 @@ export function Training() {
               </div>
             </div>
 
+            {/* Точность % */}
             <div className="flex items-center gap-2.5 sm:gap-4">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
                 <Target size={20} className={status === 'typing' ? "text-[#FFD700]" : ""} />
@@ -378,32 +536,65 @@ export function Training() {
                 </div>
               </div>
             </div>
+
+            {/* Время / Таймер обратного отсчета */}
+            <div className="flex items-center gap-2.5 sm:gap-4">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
+                {mode === 'time' ? (
+                  <Clock size={20} className={timeLeft <= 5 && status === 'typing' ? "text-red-500 animate-bounce" : status === 'typing' ? "text-[#D97706]" : ""} />
+                ) : mode === 'endless' ? (
+                  <InfinityIcon size={20} className={status === 'typing' ? "text-[#D97706] animate-pulse" : ""} />
+                ) : (
+                  <Clock size={20} className={status === 'typing' ? "text-[#FFD700]" : ""} />
+                )}
+              </div>
+              <div>
+                <div className="text-gray-400 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider mb-0.5">
+                  {mode === 'time' ? 'Осталось' : 'Время'}
+                </div>
+                <div className={`text-lg sm:text-2xl font-black ${mode === 'time' && timeLeft <= 5 && status === 'typing' ? 'text-red-600 animate-pulse' : 'text-gray-900'}`}>
+                  {mode === 'time'
+                    ? `${timeLeft}с`
+                    : formatDuration(calculateDurationSec())}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <button
-            onClick={reset}
-            className="self-start sm:self-center flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold transition-colors text-xs sm:text-sm active:scale-95"
-          >
-            <RefreshCw size={16} />
-            <span>Начать заново</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            {/* Кнопка завершения сессии в бесконечном режиме */}
+            {mode === 'endless' && status === 'typing' && (
+              <button
+                onClick={() => setStatus('finished')}
+                className="flex items-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold transition-all text-xs sm:text-sm active:scale-95 shadow-sm"
+                title="Зафиксировать результат и завершить"
+              >
+                <Square size={13} className="fill-current" />
+                <span>Завершить</span>
+              </button>
+            )}
+
+            <button
+              onClick={reset}
+              className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold transition-colors text-xs sm:text-sm active:scale-95"
+            >
+              <RefreshCw size={16} />
+              <span>Начать заново</span>
+            </button>
+          </div>
         </div>
 
-        {/* Область набираемого текста */}
+        {/* Область набираемого текста со скроллом для бесконечных потоков */}
         <div
-          className="text-xl sm:text-2xl md:text-3xl leading-relaxed font-mono select-none outline-none tracking-tight break-words min-h-[72px] sm:min-h-[96px]"
+          ref={textContainerRef}
+          className="text-xl sm:text-2xl md:text-3xl leading-[1.6] sm:leading-[1.7] font-mono select-none outline-none tracking-normal whitespace-pre-wrap break-words min-h-[72px] sm:min-h-[96px] max-h-[180px] sm:max-h-[220px] overflow-y-auto scroll-smooth pr-1"
           tabIndex={0}
           autoFocus
         >
-          {isLoading ? (
-            <div className="flex items-center gap-3 text-gray-400 text-base sm:text-lg">
+          {isLoading || isGenerating ? (
+            <div className="flex items-center gap-3 text-gray-700 text-base sm:text-lg font-medium animate-pulse">
               <Loader2 size={20} className="animate-spin text-[#FFD700]" />
-              <span>Загрузка текста из базы данных...</span>
-            </div>
-          ) : isGenerating ? (
-            <div className="flex items-center gap-3 text-gray-500 text-base sm:text-lg animate-pulse">
-              <Sparkles size={20} className="text-[#FFD700]" />
-              <span>Бесплатная нейросеть придумывает новый текст для тебя...</span>
+              <span>Текст уже придумывается...</span>
             </div>
           ) : (
             renderTextStream()
@@ -416,7 +607,13 @@ export function Training() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <CheckCircle2 size={18} className="text-green-600" />
-                <h3 className="text-lg sm:text-xl font-bold">Тренировка завершена! 🎉</h3>
+                <h3 className="text-lg sm:text-xl font-bold">
+                  {mode === 'time'
+                    ? `Раунд на ${timeLimit} сек завершен! ⏱️`
+                    : mode === 'endless'
+                    ? `Бесконечная сессия завершена! ♾️`
+                    : `Тренировка завершена! 🎉`}
+                </h3>
               </div>
               <p className="text-green-700 text-xs sm:text-sm">
                 Твоя скорость: <strong>{finalResult.wpm}</strong> сл/мин, точность:{" "}
@@ -456,14 +653,6 @@ export function Training() {
           Нажми <kbd className="bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200 text-gray-700 font-sans mx-1">Esc</kbd> для сброса.
         </div>
       </div>
-
-      {/* Модальное окно базы сохраненных текстов в SQLite */}
-      <SavedTextsModal
-        isOpen={showHistoryModal}
-        texts={history}
-        onClose={() => setShowHistoryModal(false)}
-        onSelectText={selectTextFromHistory}
-      />
     </div>
   );
 }

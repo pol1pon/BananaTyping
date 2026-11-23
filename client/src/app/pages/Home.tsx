@@ -2,7 +2,7 @@ import { HeroLeft } from "../components/HeroLeft";
 import { TrainerCard } from "../components/TrainerCard";
 import { ProgressWidget } from "../components/ProgressWidget";
 import { LeaderboardWidget } from "../components/LeaderboardWidget";
-import { Sparkles, Database, Trophy, Keyboard, CheckCircle2 } from "lucide-react";
+import { Sparkles, Trophy, Keyboard } from "lucide-react";
 
 export function Home() {
   return (
@@ -28,14 +28,14 @@ export function Home() {
         </div>
       </section>
 
-      {/* Секция возможностей и преимуществ: ИИ генератор + SQLite + Тренажер */}
+      {/* Секция возможностей и преимуществ: ИИ генератор + Тренировки + Лидерборд */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
         <div className="text-center mb-10 sm:mb-14">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
-            Все для прокачки <span className="text-[#D97706]">слепой печати</span>
+            Все для идеального владения <span className="text-[#D97706]">слепой печатью</span>
           </h2>
           <p className="text-sm sm:text-base text-gray-500 max-w-xl mx-auto">
-            Умная генерация текстов, сохранение тренировок в SQLite и отслеживание скорости в реальном времени.
+            Умная генерация текстов на любые темы, персональная статистика заездов и соревновательный рейтинг лидеров.
           </p>
         </div>
 
@@ -45,20 +45,20 @@ export function Home() {
             <div className="w-12 h-12 rounded-2xl bg-[#FFD700]/20 flex items-center justify-center text-[#D97706]">
               <Sparkles size={24} />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Бесплатный ИИ генератор</h3>
+            <h3 className="text-lg font-bold text-gray-900">Умный AI-генератор</h3>
             <p className="text-sm text-gray-500 leading-relaxed">
-              Бесплатная нейросеть придумывает тексты на любые темы: бананы, программирование, наука или цитаты, с выбором длины и сложности.
+              Искусственный интеллект придумывает разнообразные и грамотные тексты на любые темы: программирование, наука, цитаты или юмор, с выбором длины и сложности.
             </p>
           </div>
 
-          {/* Карточка 2: SQLite */}
+          {/* Карточка 2: Библиотека текстов */}
           <div className="bg-white rounded-[24px] p-6 sm:p-7 shadow-sm border border-gray-100 flex flex-col gap-3.5 hover:shadow-md transition-shadow">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
-              <Database size={24} />
+              <Keyboard size={24} />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">База данных SQLite</h3>
+            <h3 className="text-lg font-bold text-gray-900">Индивидуальная практика</h3>
             <p className="text-sm text-gray-500 leading-relaxed">
-              Каждый сгенерированный текст мгновенно сохраняется в локальную базу SQLite. Вы всегда можете открыть базу и выбрать любимый отрывок.
+              Широкий набор тренировочных текстов с поддержкой русского и английского языков, умной обработкой всех видов тире и знаков препинания.
             </p>
           </div>
 
