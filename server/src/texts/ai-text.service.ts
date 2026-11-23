@@ -16,7 +16,7 @@ export class AiTextService {
   constructor(private readonly configService: ConfigService) {}
 
   /**
-   * Генерация текста через бесплатную нейросеть
+   * Генерация текста через ИИ
    */
   async generateText(options: GenerateTextDto = {}): Promise<GeneratedResult> {
     const language = options.language || 'ru';
@@ -24,22 +24,7 @@ export class AiTextService {
     const difficulty = options.difficulty || 'medium';
     const length = options.length || 'medium';
 
-    // 1. Попытка вызвать бесплатную нейросеть Pollinations.ai (без необходимости API-ключа)
-    try {
-      const textFromPollinations = await this.callPollinationsAi(language, topic, difficulty, length);
-      if (textFromPollinations && textFromPollinations.length > 20) {
-        return {
-          text: this.cleanGeneratedText(textFromPollinations),
-          source: 'ai (pollinations)',
-          topic,
-          language,
-        };
-      }
-    } catch (err: any) {
-      this.logger.warn(`Pollinations AI error or timeout: ${err?.message || err}. Пробуем альтернативный провайдер.`);
-    }
-
-    // 2. Если задан GEMINI_API_KEY, пробуем бесплатный тир Google Gemini
+    // 1. Если задан GEMINI_API_KEY, в первую очередь используем Google Gemini (быстро и качественно)
     const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (geminiKey) {
       try {
@@ -53,11 +38,26 @@ export class AiTextService {
           };
         }
       } catch (err: any) {
-        this.logger.warn(`Gemini API error: ${err?.message || err}`);
+        this.logger.warn(`Gemini API error: ${err?.message || err}. Переключаемся на резервный провайдер.`);
       }
     }
 
-    // 3. Если сеть недоступна (офлайн/песочница/сбой API), используем умный локальный генератор текстов
+    // 2. Резервный провайдер Pollinations.ai
+    try {
+      const textFromPollinations = await this.callPollinationsAi(language, topic, difficulty, length);
+      if (textFromPollinations && textFromPollinations.length > 20) {
+        return {
+          text: this.cleanGeneratedText(textFromPollinations),
+          source: 'ai (pollinations)',
+          topic,
+          language,
+        };
+      }
+    } catch (err: any) {
+      this.logger.warn(`Pollinations AI error or timeout: ${err?.message || err}.`);
+    }
+
+    // 3. Если сеть недоступна (офлайн/песочница/сбой API), используем локальный генератор текстов
     this.logger.log('Используется локальный генератор текстов для слепой печати');
     const localText = this.generateLocalFallbackText(language, topic);
     return {
@@ -69,7 +69,7 @@ export class AiTextService {
   }
 
   /**
-   * Бесплатная нейросеть Pollinations.ai (полноценный GPT/Llama без ключей и оплат)
+   * Провайдер Pollinations.ai (без необходимости API-ключа)
    */
   private async callPollinationsAi(
     language: string,
@@ -109,7 +109,7 @@ export class AiTextService {
   }
 
   /**
-   * Запрос к бесплатному тиру Gemini при наличии ключа
+   * Запрос к Google Gemini с авто-подбором актуальной модели (gemini-3.5-flash / gemini-3.5-flash-lite)
    */
   private async callGeminiAi(
     apiKey: string,
@@ -118,32 +118,50 @@ export class AiTextService {
     difficulty: string,
     length: string,
   ): Promise<string> {
+    const cleanKey = apiKey.trim();
     const wordCount = length === 'short' ? '15-25' : length === 'long' ? '50-80' : '25-45';
     const langPrompt = language === 'ru' ? 'на русском языке' : 'in English';
     const promptText = `Напиши текст для тренажера скоропечатания ${langPrompt} на тему "${topic}". Длина: ${wordCount} слов. Сложность: ${difficulty}. Выведи ТОЛЬКО текст для набора без кавычек и комментариев.`;
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
+    const modelsToTry = [
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
+      'gemini-flash-lite-latest',
+      'gemini-3-flash-preview',
+    ];
 
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: promptText }] }],
-          }),
-          signal: controller.signal,
-        },
-      );
+    for (const model of modelsToTry) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
 
-      if (!res.ok) throw new Error(`Gemini HTTP error ${res.status}`);
-      const data: any = await res.json();
-      return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    } finally {
-      clearTimeout(timeout);
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: promptText }] }],
+            }),
+            signal: controller.signal,
+          },
+        );
+
+        if (res.ok) {
+          const data: any = await res.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text && text.trim().length > 15) {
+            return text.trim();
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(`Попытка генерации через Gemini (${model}) не удалась: ${err?.message || err}`);
+      } finally {
+        clearTimeout(timeout);
+      }
     }
+
+    return '';
   }
 
   /**

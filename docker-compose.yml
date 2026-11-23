@@ -11,7 +11,8 @@ services:
       - DB_DATABASE=/app/data/banana_typing.sqlite
       - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-replace-in-production}
       - CORS_ORIGIN=${CORS_ORIGIN:-*}
-      - AI_PROVIDER=pollinations
+      - AI_PROVIDER=${AI_PROVIDER:-pollinations}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     volumes:
       # Сохранение базы данных SQLite между перезапусками
       - sqlite_data:/app/data
