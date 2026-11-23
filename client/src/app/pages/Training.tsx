@@ -354,18 +354,44 @@ export function Training() {
   // Слушатель физической клавиатуры компьютера
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Игнорируем ввод, если фокус в реальном текстовом поле ввода (кроме нашего мобильного скрытого инпута)
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        if (e.target !== mobileInputRef.current) return;
+      }
+
       if (e.key === "Tab") {
         e.preventDefault();
         return;
       }
 
       if (e.key === "Escape") {
+        e.preventDefault();
         reset();
         return;
       }
 
+      // Если нажат пробел:
+      // Предотвращаем стандартное поведение браузера:
+      // 1) скролл страницы вниз;
+      // 2) вызов click на сфокусированной в DOM кнопке (например, «Начать заново», «Сгенерировать», «Случайный» и т.д.)
+      if (e.key === " " || e.key === "Spacebar") {
+        e.preventDefault();
+      }
+
       if (status === "finished" || isLoading || isGenerating || !sampleText) return;
       if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      // Снимаем фокус с любых кнопок интерфейса при наборе текста, чтобы повторные клавиши не активировали их
+      if (
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement !== mobileInputRef.current &&
+        document.activeElement !== document.body
+      ) {
+        document.activeElement.blur();
+      }
 
       if (e.key.length === 1) {
         processChar(e.key);
@@ -683,7 +709,10 @@ export function Training() {
             {/* Кнопка завершения сессии в бесконечном режиме */}
             {mode === 'endless' && status === 'typing' && (
               <button
-                onClick={() => setStatus('finished')}
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  setStatus('finished');
+                }}
                 className="flex items-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold transition-all text-xs sm:text-sm active:scale-95 shadow-sm"
                 title="Зафиксировать результат и завершить"
               >
@@ -693,7 +722,10 @@ export function Training() {
             )}
 
             <button
-              onClick={reset}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                reset();
+              }}
               className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold transition-colors text-xs sm:text-sm active:scale-95"
             >
               <RefreshCw size={16} />

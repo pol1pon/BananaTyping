@@ -51,7 +51,10 @@ export function AiGeneratorBar({
 
           {/* Режим: Текст */}
           <button
-            onClick={() => onSelectMode("text")}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onSelectMode("text");
+            }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
               mode === "text"
                 ? "bg-[#111111] text-[#FFD700] shadow-sm"
@@ -64,7 +67,10 @@ export function AiGeneratorBar({
 
           {/* Режим: На время */}
           <button
-            onClick={() => onSelectMode("time")}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onSelectMode("time");
+            }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
               mode === "time"
                 ? "bg-[#111111] text-[#FFD700] shadow-sm"
@@ -77,7 +83,10 @@ export function AiGeneratorBar({
 
           {/* Режим: Бесконечный */}
           <button
-            onClick={() => onSelectMode("endless")}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onSelectMode("endless");
+            }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
               mode === "endless"
                 ? "bg-[#111111] text-[#FFD700] shadow-sm"
@@ -106,7 +115,10 @@ export function AiGeneratorBar({
             {topics.map((topic) => (
               <button
                 key={topic.id}
-                onClick={() => onSelectTopic(topic.id)}
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  onSelectTopic(topic.id);
+                }}
                 className={`text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition-all ${
                   selectedTopic === topic.id
                     ? "bg-[#111111] text-[#FFD700] shadow-sm"
@@ -129,7 +141,10 @@ export function AiGeneratorBar({
                 return (
                   <button
                     key={len}
-                    onClick={() => onSelectLength(len)}
+                    onClick={(e) => {
+                      e.currentTarget.blur();
+                      onSelectLength(len);
+                    }}
                     className={`px-2 sm:px-2.5 py-1 rounded-lg font-medium transition-colors ${
                       selectedLength === len
                         ? "bg-[#FFD700] text-black font-bold"
@@ -149,7 +164,10 @@ export function AiGeneratorBar({
               {([15, 30, 60, 120] as const).map((sec) => (
                 <button
                   key={sec}
-                  onClick={() => onSelectTimeLimit(sec)}
+                  onClick={(e) => {
+                    e.currentTarget.blur();
+                    onSelectTimeLimit(sec);
+                  }}
                   className={`px-2 sm:px-2.5 py-1 rounded-lg font-medium transition-colors ${
                     timeLimit === sec
                       ? "bg-[#FFD700] text-black font-bold"
@@ -172,7 +190,10 @@ export function AiGeneratorBar({
 
           {/* Кнопка генерации нейросетью */}
           <button
-            onClick={onGenerateAi}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onGenerateAi();
+            }}
             disabled={isGenerating}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-[#111111] hover:bg-gray-800 text-[#FFD700] font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
           >
@@ -191,7 +212,10 @@ export function AiGeneratorBar({
 
           {/* Кнопка получения следующего случайного текста */}
           <button
-            onClick={onNextRandom}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onNextRandom();
+            }}
             disabled={isLoading || isGenerating}
             className="flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 disabled:opacity-50"
             title="Получить другой готовый текст"
