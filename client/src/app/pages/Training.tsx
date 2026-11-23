@@ -211,29 +211,44 @@ export function Training() {
     return () => clearInterval(interval);
   }, [mode, status, startTime, timeLimit]);
 
-  // Плавная автопрокрутка текста строго при переходе на новую строку (без рывков)
+  // Плавная и точная автопрокрутка текста строго при переходе на новую строку
   useEffect(() => {
-    if (activeCharRef.current && textContainerRef.current) {
-      const container = textContainerRef.current;
-      const element = activeCharRef.current;
-      const currentTop = element.offsetTop;
+    if (!activeCharRef.current || !textContainerRef.current) return;
 
-      if (lastLineTopRef.current === -1) {
-        lastLineTopRef.current = currentTop;
-        return;
-      }
+    const container = textContainerRef.current;
+    const element = activeCharRef.current;
 
-      // Прокручиваем только тогда, когда курсор действительно перешел на следующую строку
-      if (currentTop !== lastLineTopRef.current) {
-        lastLineTopRef.current = currentTop;
-        const relativeTop = currentTop - container.offsetTop;
-        if (relativeTop > 60) {
-          container.scrollTo({
-            top: Math.max(0, relativeTop - 36),
-            behavior: "smooth",
-          });
-        }
-      }
+    if (currentIndex === 0) {
+      lastLineTopRef.current = -1;
+      container.scrollTop = 0;
+      return;
+    }
+
+    // Определяем точную координату текущего символа относительно верха контента контейнера
+    let elementTop = element.offsetTop;
+    if (element.offsetParent !== container) {
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+      elementTop = container.scrollTop + (elementRect.top - containerRect.top);
+    }
+
+    if (lastLineTopRef.current === -1) {
+      lastLineTopRef.current = elementTop;
+      return;
+    }
+
+    // Прокручиваем только тогда, когда курсор действительно перешел на следующую строку (разница > 15px)
+    if (Math.abs(elementTop - lastLineTopRef.current) > 15) {
+      lastLineTopRef.current = elementTop;
+
+      // Удерживаем строку набора комфортно на 2-й строке (примерно 45px от верха контейнера),
+      // чтобы пользователь видел предыдущую строку и последующие строки в бесконечном тексте
+      const targetScrollTop = Math.max(0, elementTop - 45);
+
+      container.scrollTo({
+        top: targetScrollTop,
+        behavior: "smooth",
+      });
     }
   }, [currentIndex]);
 
