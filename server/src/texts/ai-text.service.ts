@@ -124,10 +124,10 @@ export class AiTextService {
     const promptText = `Напиши текст для тренажера скоропечатания ${langPrompt} на тему "${topic}". Длина: ${wordCount} слов. Сложность: ${difficulty}. Выведи ТОЛЬКО текст для набора без кавычек и комментариев.`;
 
     const modelsToTry = [
-      'gemini-3.5-flash-lite',
-      'gemini-3.5-flash',
       'gemini-flash-lite-latest',
       'gemini-3-flash-preview',
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
     ];
 
     for (const model of modelsToTry) {
@@ -153,6 +153,11 @@ export class AiTextService {
           if (text && text.trim().length > 15) {
             return text.trim();
           }
+        } else {
+          const errData: any = await res.json().catch(() => ({}));
+          this.logger.warn(
+            `Gemini (${model}) HTTP ${res.status}: ${errData?.error?.message || res.statusText}`,
+          );
         }
       } catch (err: any) {
         this.logger.warn(`Попытка генерации через Gemini (${model}) не удалась: ${err?.message || err}`);
