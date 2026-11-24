@@ -149,7 +149,7 @@ export function TrainerCard() {
         setIsFocused(true);
         inputRef.current?.focus();
       }}
-      className="bg-white rounded-[24px] sm:rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-4 sm:p-6 md:p-8 flex flex-col gap-5 sm:gap-6 border border-gray-100 hover:border-yellow-200 transition-all cursor-text relative"
+      className="bg-white rounded-[24px] sm:rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-4 sm:p-6 md:p-7 flex flex-col justify-between border border-gray-100 hover:border-yellow-200 transition-all cursor-text relative h-full min-h-[460px]"
     >
       {/* Невидимый инпут для поддержки мобильного ввода и клавиатуры */}
       <input

@@ -43,101 +43,72 @@ const KEYBOARDS: Record<'ru' | 'en', string[][]> = {
   ]
 };
 
-const TOPICS: Record<'ru' | 'en', TopicOption[]> = {
-  ru: [
-    { id: "бананы и юмор", label: "🍌 Бананы" },
-    { id: "программирование и IT", label: "💻 IT и код" },
-    { id: "космос и наука", label: "🚀 Космос" },
-    { id: "философия и цитаты", label: "💡 Цитаты" },
-    { id: "случайная тема", label: "🎲 Любая" },
-  ],
-  en: [
-    { id: "bananas and humor", label: "🍌 Bananas" },
-    { id: "coding and technology", label: "💻 Coding" },
-    { id: "space and science", label: "🚀 Science" },
-    { id: "quotes and life", label: "💡 Quotes" },
-    { id: "random topic", label: "🎲 Random" },
-  ]
-};
+const TOPICS: TopicOption[] = [
+  { id: "бананы и юмор", label: "🍌 Бананы" },
+  { id: "программирование и IT", label: "💻 IT и код" },
+  { id: "космос и наука", label: "🚀 Космос" },
+  { id: "философия и цитаты", label: "💡 Цитаты" },
+  { id: "случайная тема", label: "🎲 Любая" },
+];
 
 /**
  * Находит ID соответствующей кнопки темы на основе темы текста из базы данных
  */
-function findMatchingTopicId(rawTopic: string | null | undefined, lang: 'ru' | 'en'): string {
+function findMatchingTopicId(rawTopic: string | null | undefined): string {
   if (!rawTopic) {
-    return lang === 'ru' ? "случайная тема" : "random topic";
+    return "случайная тема";
   }
 
   const normalized = rawTopic.trim().toLowerCase();
 
   // 1. Прямое совпадение с id из доступных кнопок тем
-  const availableTopics = TOPICS[lang];
-  const exactMatch = availableTopics.find((t) => t.id.toLowerCase() === normalized);
+  const exactMatch = TOPICS.find((t) => t.id.toLowerCase() === normalized);
   if (exactMatch) {
     return exactMatch.id;
   }
 
-  // 2. Семантическое сопоставление (учитывает темы из базы и сидов)
-  if (lang === 'ru') {
-    if (normalized.includes('банан')) {
-      return "бананы и юмор";
-    }
-    if (
-      normalized.includes('программир') ||
-      normalized.includes('код') ||
-      normalized.includes('технолог') ||
-      normalized.includes('it')
-    ) {
-      return "программирование и IT";
-    }
-    if (
-      normalized.includes('космос') ||
-      normalized.includes('наук') ||
-      normalized.includes('астроном')
-    ) {
-      return "космос и наука";
-    }
-    if (
-      normalized.includes('цитат') ||
-      normalized.includes('философ') ||
-      normalized.includes('саморазвит') ||
-      normalized.includes('продуктивн') ||
-      normalized.includes('жизнь') ||
-      normalized.includes('мысл')
-    ) {
-      return "философия и цитаты";
-    }
-    return "случайная тема";
-  } else {
-    if (normalized.includes('banana')) {
-      return "bananas and humor";
-    }
-    if (
-      normalized.includes('code') ||
-      normalized.includes('coding') ||
-      normalized.includes('program') ||
-      normalized.includes('tech') ||
-      normalized.includes('it')
-    ) {
-      return "coding and technology";
-    }
-    if (
-      normalized.includes('space') ||
-      normalized.includes('science') ||
-      normalized.includes('cosmo')
-    ) {
-      return "space and science";
-    }
-    if (
-      normalized.includes('quote') ||
-      normalized.includes('life') ||
-      normalized.includes('productiv') ||
-      normalized.includes('philosop')
-    ) {
-      return "quotes and life";
-    }
-    return "random topic";
+  // 2. Семантическое сопоставление (учитывает темы на русском и английском из базы, сидов и ИИ)
+  if (normalized.includes('банан') || normalized.includes('banana')) {
+    return "бананы и юмор";
   }
+  if (
+    normalized.includes('программир') ||
+    normalized.includes('код') ||
+    normalized.includes('технолог') ||
+    normalized.includes('it') ||
+    normalized.includes('code') ||
+    normalized.includes('coding') ||
+    normalized.includes('program') ||
+    normalized.includes('tech')
+  ) {
+    return "программирование и IT";
+  }
+  if (
+    normalized.includes('космос') ||
+    normalized.includes('наук') ||
+    normalized.includes('астроном') ||
+    normalized.includes('space') ||
+    normalized.includes('science') ||
+    normalized.includes('cosmo')
+  ) {
+    return "космос и наука";
+  }
+  if (
+    normalized.includes('цитат') ||
+    normalized.includes('философ') ||
+    normalized.includes('саморазвит') ||
+    normalized.includes('продуктивн') ||
+    normalized.includes('жизнь') ||
+    normalized.includes('мысл') ||
+    normalized.includes('quote') ||
+    normalized.includes('life') ||
+    normalized.includes('productiv') ||
+    normalized.includes('philosop')
+  ) {
+    return "философия и цитаты";
+  }
+
+  return "случайная тема";
 }
 
 // Пул предложений для непрерывного потока в бесконечном режиме и режиме на время
@@ -194,6 +165,8 @@ export function Training() {
   const [lang, setLang] = useState<'ru' | 'en'>('ru');
   const [selectedTopic, setSelectedTopic] = useState<string>("бананы и юмор");
   const [selectedLength, setSelectedLength] = useState<'short' | 'medium' | 'long'>('medium');
+  const [includeNumbers, setIncludeNumbers] = useState(false);
+  const [includePunctuation, setIncludePunctuation] = useState(true);
 
   // Режимы тренировки: обычный текст, на время, бесконечный
   const [mode, setMode] = useState<TrainingMode>('text');
@@ -258,7 +231,7 @@ export function Training() {
     if (currentText) {
       setActiveText(currentText);
       if (currentTopic) {
-        const matched = findMatchingTopicId(currentTopic, lang);
+        const matched = findMatchingTopicId(currentTopic);
         setSelectedTopic(matched);
       }
       reset();
@@ -545,7 +518,6 @@ export function Training() {
   // Смена языка
   const handleLangChange = (newLang: 'ru' | 'en') => {
     setLang(newLang);
-    setSelectedTopic(newLang === 'ru' ? "бананы и юмор" : "bananas and humor");
     reset();
   };
 
@@ -557,11 +529,38 @@ export function Training() {
         topic: selectedTopic,
         length: mode === 'endless' ? 'long' : selectedLength,
         difficulty: 'medium',
+        includeNumbers,
+        includePunctuation,
       });
       setActiveText(text);
       await fetchHistory(lang);
+      reset();
+      setTimeout(() => focusMobileInput(), 80);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Автоматическая генерация нового текста через ИИ при старте нового заезда после тренировки
+  const handleStartNewWithAi = async () => {
+    try {
+      const text = await generateAiText({
+        language: lang,
+        topic: selectedTopic,
+        length: mode === 'endless' ? 'long' : selectedLength,
+        difficulty: 'medium',
+        includeNumbers,
+        includePunctuation,
+      });
+      setActiveText(text);
+      await fetchHistory(lang);
+      reset();
+      setTimeout(() => focusMobileInput(), 80);
+    } catch (err) {
+      console.warn("Ошибка ИИ при старте нового заезда, загружаем случайный текст:", err);
+      await handleNextRandom();
+      reset();
+      setTimeout(() => focusMobileInput(), 80);
     }
   };
 
@@ -670,11 +669,15 @@ export function Training() {
           onSelectMode={handleSelectMode}
           timeLimit={timeLimit}
           onSelectTimeLimit={handleSelectTimeLimit}
-          topics={TOPICS[lang]}
+          topics={TOPICS}
           selectedTopic={selectedTopic}
           onSelectTopic={setSelectedTopic}
           selectedLength={selectedLength}
           onSelectLength={setSelectedLength}
+          includeNumbers={includeNumbers}
+          onToggleNumbers={setIncludeNumbers}
+          includePunctuation={includePunctuation}
+          onTogglePunctuation={setIncludePunctuation}
           onGenerateAi={handleGenerateAi}
           onNextRandom={handleNextRandom}
           isGenerating={isGenerating}
@@ -711,6 +714,11 @@ export function Training() {
         {/* Метки темы и текущего режима */}
         <div className="flex flex-wrap items-center justify-between gap-3 -mb-1">
           <div className="flex flex-wrap items-center gap-2">
+            {currentTopic && (
+              <span className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-[#FFD700]/20 text-gray-900">
+                Тема: {currentTopic}
+              </span>
+            )}
             <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-gray-100 text-gray-700">
               {mode === 'time' ? (
                 <>
@@ -729,11 +737,6 @@ export function Training() {
                 </>
               )}
             </span>
-            {currentTopic && (
-              <span className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-[#FFD700]/20 text-gray-900">
-                Тема: {currentTopic}
-              </span>
-            )}
             {status === 'typing' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-[#FFD700] text-[#111111] animate-pulse shadow-xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#111111]"></span>
@@ -823,12 +826,18 @@ export function Training() {
             <button
               onClick={(e) => {
                 e.currentTarget.blur();
-                reset();
+                if (status === 'finished') {
+                  handleStartNewWithAi();
+                } else {
+                  reset();
+                }
               }}
-              className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold transition-colors text-xs sm:text-sm active:scale-95"
+              disabled={isGenerating}
+              className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold transition-colors text-xs sm:text-sm active:scale-95 disabled:opacity-50"
+              title={status === 'finished' ? "Сгенерировать новый текст через ИИ с учетом прошлой темы и размера" : "Сбросить текущий заезд"}
             >
-              <RefreshCw size={16} />
-              <span>Начать заново</span>
+              <RefreshCw size={16} className={isGenerating ? "animate-spin text-[#D97706]" : ""} />
+              <span>{status === 'finished' ? (isGenerating ? 'Генерация...' : 'Начать новый заезд') : 'Начать заново'}</span>
             </button>
           </div>
         </div>
@@ -909,22 +918,32 @@ export function Training() {
               <button
                 onClick={(e) => {
                   e.currentTarget.blur();
-                  handleGenerateAi();
+                  handleStartNewWithAi();
                 }}
                 disabled={isGenerating}
-                className="bg-[#111111] hover:bg-gray-800 text-[#FFD700] font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 whitespace-nowrap text-xs sm:text-sm active:scale-95 disabled:opacity-50"
+                className="bg-[#111111] hover:bg-gray-800 text-[#FFD700] font-bold py-2.5 px-5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 whitespace-nowrap text-xs sm:text-sm active:scale-95 disabled:opacity-50"
               >
-                <Sparkles size={15} />
-                <span>Сгенерировать с ИИ</span>
+                {isGenerating ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin text-[#FFD700]" />
+                    <span>ИИ придумывает текст...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} />
+                    <span>Начать новый заезд</span>
+                  </>
+                )}
               </button>
               <button
                 onClick={(e) => {
                   e.currentTarget.blur();
                   handleNextRandom();
                 }}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-xl transition-colors whitespace-nowrap shadow-sm text-xs sm:text-sm active:scale-95 text-center"
+                disabled={isLoading || isGenerating}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-xl transition-colors whitespace-nowrap shadow-sm text-xs sm:text-sm active:scale-95 text-center disabled:opacity-50"
               >
-                Следующий текст
+                Случайный из базы
               </button>
             </div>
           </div>

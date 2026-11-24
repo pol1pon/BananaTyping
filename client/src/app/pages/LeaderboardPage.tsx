@@ -9,9 +9,7 @@ import {
   Clock, 
   Search, 
   ArrowRight, 
-  Flame, 
   RefreshCw,
-  Sparkles,
   User as UserIcon,
   Keyboard
 } from "lucide-react";
@@ -102,13 +100,6 @@ export function LeaderboardPage() {
   const topThree = processedEntries.slice(0, 3);
   const remainingEntries = processedEntries.slice(3);
 
-  // Статистические показатели топа
-  const maxWpm = allEntries.length > 0 ? Math.max(...allEntries.map((e) => e.wpm)) : 0;
-  const avgAccuracy =
-    allEntries.length > 0
-      ? Math.round(allEntries.reduce((acc, curr) => acc + curr.accuracy, 0) / allEntries.length)
-      : 0;
-
   const formatDate = (isoString?: string) => {
     if (!isoString) return "";
     try {
@@ -161,51 +152,6 @@ export function LeaderboardPage() {
             <Keyboard size={16} />
             <span>Тренироваться</span>
           </Link>
-        </div>
-      </div>
-
-      {/* Карточки со сводкой показателей топа */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-8">
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-[#D97706] flex items-center justify-center shrink-0">
-            <Flame size={22} className="fill-current" />
-          </div>
-          <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-              Абсолютный рекорд
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-gray-900">
-              {maxWpm} <span className="text-xs font-semibold text-gray-500">WPM</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center shrink-0">
-            <Target size={22} />
-          </div>
-          <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-              Средняя точность
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-gray-900">
-              {avgAccuracy}%
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <Sparkles size={22} />
-          </div>
-          <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-              Участников в рейтинге
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-gray-900">
-              {allEntries.length}
-            </div>
-          </div>
         </div>
       </div>
 

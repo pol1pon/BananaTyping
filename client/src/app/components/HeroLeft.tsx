@@ -3,17 +3,17 @@ import { Link } from "react-router";
 
 export function HeroLeft() {
   return (
-    <div className="pt-4 sm:pt-8 md:pt-12 pb-6 sm:pb-10 text-white relative z-10 flex flex-col items-start">
-      <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium mb-6 backdrop-blur-sm border border-white/10 text-yellow-300">
+    <div className="pt-2 sm:pt-4 lg:py-2 text-white relative z-10 flex flex-col items-start w-full min-w-0">
+      <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium mb-5 backdrop-blur-sm border border-white/10 text-yellow-300">
         <Sparkles size={14} className="text-[#FFD700]" />
         <span>Умная генерация текстов нового поколения</span>
       </div>
 
-      <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-[1.1] mb-5 tracking-tight">
-        ОСВОЙ СКОРОПЕЧАТАНИЕ С <span className="text-[#FFD700]">BANANATYPING!</span>
+      <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[38px] xl:text-[46px] 2xl:text-5xl font-black leading-[1.12] mb-5 tracking-tight break-words max-w-full">
+        ПРОКАЧАЙ СКОРОПЕЧАТАНИЕ С <span className="text-[#FFD700]">BANANATYPING!</span>
       </h1>
 
-      <p className="text-base sm:text-lg md:text-xl text-gray-400 mb-8 max-w-lg leading-relaxed">
+      <p className="text-base sm:text-lg text-gray-400 mb-8 max-w-lg leading-relaxed">
         Учись печатать быстро, ритмично и без опечаток. Интерактивный тренажер с умной ИИ-генерацией текстов под любые темы поможет увеличить скорость печати в 2 раза и довести слепой метод до автоматизма.
       </p>
 

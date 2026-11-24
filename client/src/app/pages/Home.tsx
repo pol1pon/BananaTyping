@@ -10,16 +10,16 @@ export function Home() {
       {/* Темный Hero-блок со скруглением в стиле спецификации */}
       <section className="bg-[#111111] rounded-b-[36px] sm:rounded-b-[48px] lg:rounded-br-[120px] lg:rounded-bl-none text-white pt-4 pb-14 sm:pb-20 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-            <div className="lg:col-span-5">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 xl:gap-10 items-stretch">
+            <div className="lg:col-span-5 flex flex-col justify-center">
               <HeroLeft />
             </div>
 
-            <div className="lg:col-span-7 grid grid-cols-1 xl:grid-cols-3 gap-6 lg:mt-6 xl:mt-8">
-              <div className="xl:col-span-2">
+            <div className="lg:col-span-7 grid grid-cols-1 xl:grid-cols-3 gap-5 xl:gap-6 items-stretch">
+              <div className="xl:col-span-2 flex flex-col">
                 <TrainerCard />
               </div>
-              <div className="xl:col-span-1 flex flex-col sm:flex-row xl:flex-col gap-6">
+              <div className="xl:col-span-1 flex flex-col sm:flex-row xl:flex-col gap-4 sm:gap-5 justify-between">
                 <ProgressWidget />
                 <LeaderboardWidget />
               </div>

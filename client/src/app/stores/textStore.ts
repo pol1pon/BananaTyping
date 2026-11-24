@@ -147,10 +147,18 @@ export const useTextStore = create<TextState>((set, get) => ({
 
       return textContent;
     } catch (err: any) {
-      console.error('Ошибка при генерации текста через ИИ:', err);
-      const errorMsg = err?.message || 'Не удалось сгенерировать текст. Проверьте соединение с сервером.';
-      set({ isGenerating: false, error: errorMsg });
-      throw err;
+      console.warn('Ошибка при генерации текста через ИИ, используем резервный пул текстов:', err);
+      const fallback = getRandomFallbackText(lang);
+      set({
+        currentText: fallback,
+        currentTextId: null,
+        currentTopic: params.topic || null,
+        currentDifficulty: params.difficulty || null,
+        currentSource: 'ai-fallback',
+        isGenerating: false,
+        error: null,
+      });
+      return fallback;
     }
   },
 

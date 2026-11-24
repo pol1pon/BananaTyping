@@ -46,6 +46,8 @@ export class TextsService implements OnModuleInit {
       topic: aiResult.topic,
       difficulty: dto.difficulty || 'medium',
       source: aiResult.source,
+      hasNumbers: dto.includeNumbers ?? false,
+      hasPunctuation: dto.includePunctuation ?? true,
       createdAt: new Date(),
     });
 
@@ -62,9 +64,15 @@ export class TextsService implements OnModuleInit {
       }
     }
 
-    const saved = await this.textRepository.save(newText);
-    this.logger.log(`Сгенерирован и сохранен новый текст (ID: ${saved.id}, язык: ${saved.language}, источник: ${saved.source})`);
-    return saved;
+    try {
+      const saved = await this.textRepository.save(newText);
+      this.logger.log(`Сгенерирован и сохранен новый текст (ID: ${saved.id}, язык: ${saved.language}, источник: ${saved.source})`);
+      return saved;
+    } catch (dbErr: any) {
+      this.logger.warn(`Не удалось сохранить сгенерированный текст в БД: ${dbErr?.message || dbErr}. Возвращаем текст без сохранения.`);
+      newText.id = 0;
+      return newText;
+    }
   }
 
   /**

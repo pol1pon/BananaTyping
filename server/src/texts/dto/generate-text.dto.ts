@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 
 export class GenerateTextDto {
   @ApiPropertyOptional({ example: 'ru', enum: ['ru', 'en'], description: 'Language for text generation' })
@@ -21,4 +21,14 @@ export class GenerateTextDto {
   @IsOptional()
   @IsIn(['short', 'medium', 'long'])
   length?: 'short' | 'medium' | 'long';
+
+  @ApiPropertyOptional({ example: false, description: 'Содержит ли текст цифры' })
+  @IsOptional()
+  @IsBoolean()
+  includeNumbers?: boolean;
+
+  @ApiPropertyOptional({ example: true, description: 'Содержит ли текст знаки пунктуации' })
+  @IsOptional()
+  @IsBoolean()
+  includePunctuation?: boolean;
 }

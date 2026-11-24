@@ -57,6 +57,8 @@ export type Text = {
     topic?: string;
     difficulty?: string;
     source?: string;
+    hasNumbers?: boolean;
+    hasPunctuation?: boolean;
     createdAt?: string;
     [key: string]: unknown;
 };
@@ -66,6 +68,8 @@ export type GenerateTextDto = {
     topic?: string;
     difficulty?: 'easy' | 'medium' | 'hard';
     length?: 'short' | 'medium' | 'long';
+    includeNumbers?: boolean;
+    includePunctuation?: boolean;
 };
 
 export type TextsControllerGenerateData = {

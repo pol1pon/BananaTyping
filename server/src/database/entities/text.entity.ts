@@ -24,6 +24,12 @@ export class Text {
   @Column({ default: 'ai' })
   source!: string; // 'ai' | 'seed' | 'manual'
 
+  @Column({ default: false, nullable: true })
+  hasNumbers?: boolean;
+
+  @Column({ default: true, nullable: true })
+  hasPunctuation?: boolean;
+
   @CreateDateColumn()
   createdAt!: Date;
 }
