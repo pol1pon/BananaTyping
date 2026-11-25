@@ -6,6 +6,8 @@ import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Profile } from "./pages/Profile";
+import { AdminDashboard } from "./pages/AdminDashboard";
+import { AdminClaimPage } from "./pages/AdminClaimPage";
 
 export const router = createBrowserRouter([
   {
@@ -27,6 +29,19 @@ export const router = createBrowserRouter([
   },
   {
     path: "/profile",
-    Component: Profile
-  }
+    Component: Profile,
+  },
+  {
+    path: "/admin",
+    Component: AdminDashboard,
+  },
+  {
+    path: "/admin/claim/:secretKey",
+    Component: AdminClaimPage,
+  },
+  {
+    path: "/admin/claim",
+    Component: AdminClaimPage,
+  },
 ]);
+

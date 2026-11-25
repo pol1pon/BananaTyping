@@ -24,7 +24,7 @@ export function VirtualKeyboard({
   return (
     <div
       data-keyboard-container
-      className="w-full flex flex-col gap-1 sm:gap-2 md:gap-2.5 items-center bg-gray-50/90 border border-gray-100 p-2.5 sm:p-5 md:p-7 rounded-[20px] sm:rounded-[24px] max-w-full overflow-x-auto"
+      className="w-full flex flex-col gap-1 sm:gap-2 md:gap-2.5 items-center bg-gray-50/90 border border-gray-100 p-2 sm:p-5 md:p-7 rounded-[20px] sm:rounded-[24px] max-w-full overflow-hidden"
     >
       {/* Ряды букв, цифр и знаков */}
       {keyboardRows.map((row, rowIndex) => (
@@ -47,7 +47,7 @@ export function VirtualKeyboard({
             return (
               <div
                 key={key}
-                className={`${keyStyle} flex-1 min-w-[20px] max-w-[42px] sm:max-w-[50px] md:max-w-[56px] h-7 sm:h-9 md:h-12 rounded-md sm:rounded-xl md:rounded-2xl flex items-center justify-center text-[10px] sm:text-xs md:text-base select-none transition-all duration-150 ease-out`}
+                className={`${keyStyle} flex-1 min-w-0 max-w-[42px] sm:max-w-[50px] md:max-w-[56px] h-7 sm:h-9 md:h-12 rounded-md sm:rounded-xl md:rounded-2xl flex items-center justify-center text-[9px] sm:text-xs md:text-base select-none transition-all duration-150 ease-out`}
               >
                 {key}
               </div>

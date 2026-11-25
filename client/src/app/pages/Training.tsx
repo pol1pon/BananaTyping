@@ -19,7 +19,6 @@ import { Link } from "react-router";
 import { useAuthStore } from "../stores/userStore";
 import { useLeaderboardStore } from "../stores/leaderboardStore";
 import { useTextStore } from "../stores/textStore";
-import { leaderboardsControllerCreate } from "../../client/sdk.gen";
 
 import { VirtualKeyboard } from "../components/training/VirtualKeyboard";
 import { 
@@ -147,7 +146,7 @@ const STREAMING_SENTENCES: Record<'ru' | 'en', string[]> = {
 };
 
 export function Training() {
-  const { currentUser, fetchUserResults } = useAuthStore();
+  const { currentUser, saveTypingResult } = useAuthStore();
   const { fetchLeaderboard } = useLeaderboardStore();
   const { 
     currentText, 
@@ -197,6 +196,7 @@ export function Training() {
 
   // Финальные сохраненные результаты после завершения теста
   const [finalResult, setFinalResult] = useState<{ wpm: number; accuracy: number; duration: number } | null>(null);
+  const hasSavedRunRef = useRef(false);
 
   const sampleText = activeText || currentText || "";
   const currentIndex = typedChars.length;
@@ -204,6 +204,7 @@ export function Training() {
 
   // Сброс прогресса набора
   const reset = useCallback(() => {
+    hasSavedRunRef.current = false;
     setTypedChars("");
     typedCharsRef.current = "";
     setStartTime(null);
@@ -492,28 +493,32 @@ export function Training() {
     }
   }, [scrollToTrainer]);
 
-  // Сохранение результатов в БД при завершении
+  // Сохранение результатов в БД (или локально для гостя) при завершении
   useEffect(() => {
-    if (status !== "finished") return;
+    if (status !== "finished" || hasSavedRunRef.current) return;
+    hasSavedRunRef.current = true;
 
     const wpm = calculateWPM();
     const accuracy = calculateAccuracy();
-    const duration = calculateDurationSec();
+    const duration = Math.max(1, calculateDurationSec());
     setFinalResult({ wpm, accuracy, duration });
 
-    if (currentUser && wpm > 0) {
-      leaderboardsControllerCreate({
-        body: {
-          userId: Number(currentUser.id),
-          wpm,
-          accuracy,
-          duration_sec: duration,
-        },
-      })
-        .then(() => Promise.all([fetchUserResults(String(currentUser.id)), fetchLeaderboard()]))
-        .catch((err) => console.error("Ошибка сохранения результата:", err));
+    if (wpm > 0) {
+      saveTypingResult({
+        wpm,
+        accuracy,
+        duration_sec: duration,
+        language: lang,
+        mode,
+        characters: currentIndex,
+        errors,
+      }).then(() => {
+        if (currentUser) {
+          fetchLeaderboard();
+        }
+      });
     }
-  }, [status, currentUser, calculateWPM, calculateAccuracy, calculateDurationSec, fetchUserResults, fetchLeaderboard]);
+  }, [status, currentUser, lang, mode, currentIndex, errors, calculateWPM, calculateAccuracy, calculateDurationSec, saveTypingResult, fetchLeaderboard]);
 
   // Смена языка
   const handleLangChange = (newLang: 'ru' | 'en') => {
@@ -751,7 +756,7 @@ export function Training() {
 
         {/* Панель статистики в реальном времени */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-5 sm:pb-6">
-          <div className="flex gap-6 sm:gap-10">
+          <div className="grid grid-cols-3 sm:flex gap-2 sm:gap-10 w-full sm:w-auto">
             {/* Скорость WPM */}
             <div className="flex items-center gap-2.5 sm:gap-4">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">

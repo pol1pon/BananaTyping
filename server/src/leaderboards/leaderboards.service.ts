@@ -35,7 +35,11 @@ export class LeaderboardsService {
   }
 
   findByUserId(userId: number): Promise<LeaderBoard[]> {
-    return this.leaderboardRepository.find({ where: { userId }, relations: ['user'] });
+    return this.leaderboardRepository.find({
+      where: { userId },
+      relations: ['user'],
+      order: { createdAt: 'ASC', id: 'ASC' },
+    });
   }
 
   async update(id: number, updateLeaderboardDto: UpdateLeaderboardDto): Promise<LeaderBoard | null> {

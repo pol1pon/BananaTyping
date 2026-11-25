@@ -233,7 +233,7 @@ export function AiGeneratorBar({
         </div>
 
         {/* Кнопки генерации нейросетью и случайного текста */}
-        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+        <div className="w-full sm:w-auto grid grid-cols-2 sm:flex items-center gap-2 shrink-0">
           <button
             onClick={(e) => {
               e.currentTarget.blur();

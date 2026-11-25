@@ -13,6 +13,7 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-*}
       - AI_PROVIDER=${AI_PROVIDER:-pollinations}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY:-banana_secret_admin_2026}
     volumes:
       # Сохранение базы данных SQLite между перезапусками
       - sqlite_data:/app/data

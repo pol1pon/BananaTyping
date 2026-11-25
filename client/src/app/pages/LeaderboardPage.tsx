@@ -210,7 +210,7 @@ export function LeaderboardPage() {
           </div>
 
           {/* 1 МЕСТО (Золото) */}
-          <div className="order-1 md:order-2 bg-gradient-to-b from-amber-500/15 via-white to-white rounded-3xl p-6 sm:p-7 border-2 border-[#FFD700] ring-4 ring-[#FFD700]/20 shadow-[0_12px_32px_rgba(255,215,0,0.2)] flex flex-col items-center text-center relative overflow-hidden -mt-2">
+          <div className="order-1 md:order-2 bg-gradient-to-b from-amber-500/15 via-white to-white rounded-3xl p-6 sm:p-7 border-2 border-[#FFD700] ring-4 ring-[#FFD700]/20 shadow-[0_12px_32px_rgba(255,215,0,0.2)] flex flex-col items-center text-center relative overflow-hidden md:-mt-4">
             <div className="absolute top-3 right-3 text-xs font-bold bg-[#FFD700] text-gray-900 px-2 py-0.5 rounded-full flex items-center gap-1">
               <Crown size={12} className="fill-current" />
               <span>Чемпион</span>
@@ -263,10 +263,10 @@ export function LeaderboardPage() {
           
           <div className="flex flex-wrap items-center gap-3">
             {/* Переключатель периода (За 24 часа / За все время) */}
-            <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
+            <div className="flex items-center bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
               <button
                 onClick={() => setTimeRange("all")}
-                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+                className={`flex-1 sm:flex-initial text-center px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
                   timeRange === "all"
                     ? "bg-white text-gray-900 shadow-xs"
                     : "text-gray-500 hover:text-gray-900"
@@ -276,7 +276,7 @@ export function LeaderboardPage() {
               </button>
               <button
                 onClick={() => setTimeRange("24h")}
-                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
                   timeRange === "24h"
                     ? "bg-white text-gray-900 shadow-xs"
                     : "text-gray-500 hover:text-gray-900"
@@ -288,10 +288,10 @@ export function LeaderboardPage() {
             </div>
 
             {/* Переключатель режимов отображения */}
-            <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
+            <div className="flex items-center bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
               <button
                 onClick={() => setFilterMode("best")}
-                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+                className={`flex-1 sm:flex-initial text-center px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
                   filterMode === "best"
                     ? "bg-white text-gray-900 shadow-xs"
                     : "text-gray-500 hover:text-gray-900"
@@ -301,7 +301,7 @@ export function LeaderboardPage() {
               </button>
               <button
                 onClick={() => setFilterMode("all")}
-                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+                className={`flex-1 sm:flex-initial text-center px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
                   filterMode === "all"
                     ? "bg-white text-gray-900 shadow-xs"
                     : "text-gray-500 hover:text-gray-900"
@@ -313,7 +313,7 @@ export function LeaderboardPage() {
           </div>
 
           {/* Строка поиска по нику */}
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative flex-1 w-full lg:max-w-sm">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
               type="text"
@@ -340,12 +340,12 @@ export function LeaderboardPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/50">
-                <th className="py-3.5 sm:py-4 px-4 sm:px-6 w-16">#</th>
-                <th className="py-3.5 sm:py-4 px-4 sm:px-6">Пользователь</th>
-                <th className="py-3.5 sm:py-4 px-4 sm:px-6 text-right">Скорость</th>
-                <th className="py-3.5 sm:py-4 px-4 sm:px-6 text-right">Точность</th>
-                <th className="py-3.5 sm:py-4 px-4 sm:px-6 text-right hidden sm:table-cell">Время</th>
-                <th className="py-3.5 sm:py-4 px-4 sm:px-6 text-right hidden md:table-cell">Дата</th>
+                <th className="py-3.5 sm:py-4 px-3 sm:px-6 w-12 sm:w-16">#</th>
+                <th className="py-3.5 sm:py-4 px-3 sm:px-6">Пользователь</th>
+                <th className="py-3.5 sm:py-4 px-3 sm:px-6 text-right">Скорость</th>
+                <th className="py-3.5 sm:py-4 px-3 sm:px-6 text-right">Точность</th>
+                <th className="py-3.5 sm:py-4 px-3 sm:px-6 text-right hidden sm:table-cell">Время</th>
+                <th className="py-3.5 sm:py-4 px-3 sm:px-6 text-right hidden md:table-cell">Дата</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-xs sm:text-sm">
@@ -373,7 +373,7 @@ export function LeaderboardPage() {
                       }`}
                     >
                       {/* Ранг # */}
-                      <td className="py-3.5 sm:py-4 px-4 sm:px-6">
+                      <td className="py-3.5 sm:py-4 px-3 sm:px-6">
                         <div className="flex items-center">
                           {rank === 1 ? (
                             <span className="w-7 h-7 rounded-full bg-[#FFD700] text-gray-900 flex items-center justify-center font-black text-xs shadow-xs">
@@ -394,9 +394,9 @@ export function LeaderboardPage() {
                       </td>
 
                       {/* Пользователь */}
-                      <td className="py-3.5 sm:py-4 px-4 sm:px-6">
-                        <div className="flex items-center gap-2.5 sm:gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs ${
+                      <td className="py-3.5 sm:py-4 px-3 sm:px-6">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs ${
                             rank === 1
                               ? "bg-gradient-to-tr from-yellow-400 to-amber-500 text-gray-900"
                               : rank === 2
@@ -407,8 +407,8 @@ export function LeaderboardPage() {
                           }`}>
                             {username.charAt(0).toUpperCase()}
                           </div>
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className={`font-bold truncate ${isCurrent ? "text-[#D97706]" : "text-gray-900"}`}>
+                          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                            <span className={`font-bold truncate max-w-[100px] sm:max-w-none ${isCurrent ? "text-[#D97706]" : "text-gray-900"}`}>
                               {username}
                             </span>
                             {isCurrent && (
@@ -421,7 +421,7 @@ export function LeaderboardPage() {
                       </td>
 
                       {/* Скорость WPM */}
-                      <td className="py-3.5 sm:py-4 px-4 sm:px-6 text-right">
+                      <td className="py-3.5 sm:py-4 px-3 sm:px-6 text-right">
                         <span className="inline-flex items-center gap-1 font-black text-gray-900 text-sm sm:text-base">
                           <Zap size={14} className="text-[#D97706] fill-current" />
                           <span>{entry.wpm}</span>
@@ -430,7 +430,7 @@ export function LeaderboardPage() {
                       </td>
 
                       {/* Точность % */}
-                      <td className="py-3.5 sm:py-4 px-4 sm:px-6 text-right">
+                      <td className="py-3.5 sm:py-4 px-3 sm:px-6 text-right">
                         <span className="inline-flex items-center gap-1 font-bold text-gray-700">
                           <Target size={13} className="text-emerald-500" />
                           <span>{entry.accuracy}%</span>
@@ -438,12 +438,12 @@ export function LeaderboardPage() {
                       </td>
 
                       {/* Длительность сессии */}
-                      <td className="py-3.5 sm:py-4 px-4 sm:px-6 text-right text-gray-500 hidden sm:table-cell font-medium">
+                      <td className="py-3.5 sm:py-4 px-3 sm:px-6 text-right text-gray-500 hidden sm:table-cell font-medium">
                         {entry.duration_sec ? `${entry.duration_sec}с` : "—"}
                       </td>
 
                       {/* Дата */}
-                      <td className="py-3.5 sm:py-4 px-4 sm:px-6 text-right text-gray-400 hidden md:table-cell text-xs font-medium">
+                      <td className="py-3.5 sm:py-4 px-3 sm:px-6 text-right text-gray-400 hidden md:table-cell text-xs font-medium">
                         {formatDate(entry.createdAt)}
                       </td>
                     </tr>

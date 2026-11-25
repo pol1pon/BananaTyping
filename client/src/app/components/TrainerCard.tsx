@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ArrowRight, RotateCcw, Sparkles, CheckCircle2 } from "lucide-react";
+import { ArrowRight, RotateCcw, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router";
 import { areCharsEqual } from "../utils/charMatching";
+import { useAuthStore } from "../stores/userStore";
+import { useLeaderboardStore } from "../stores/leaderboardStore";
 
 const keyboardRows = [
   ["Й", "Ц", "У", "К", "Е", "Н", "Г", "Ш", "Щ", "З", "Х", "Ъ"],
@@ -13,18 +15,26 @@ const SAMPLE_TEXTS = [
   "скоропечатание развивает моторику и память",
   "бананы заряжают энергией для быстрой печати",
   "слепая печать экономит сотни часов работы каждый год",
+  "быстрые пальцы и спокойный ритм побеждают любую спешку",
+  "чистый код рождается когда руки не смотрят на клавиши",
 ];
 
 export function TrainerCard() {
+  const { currentUser, saveTypingResult } = useAuthStore();
+  const { fetchLeaderboard } = useLeaderboardStore();
+
   const [textIndex, setTextIndex] = useState(0);
   const sampleText = SAMPLE_TEXTS[textIndex];
 
   const [typedChars, setTypedChars] = useState("");
   const typedCharsRef = useRef("");
   const [startTime, setStartTime] = useState<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [errors, setErrors] = useState(0);
+  const errorsRef = useRef(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [finalStats, setFinalStats] = useState<{ wpm: number; accuracy: number; duration: number } | null>(null);
   const [pressedKey, setPressedKey] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -38,35 +48,40 @@ export function TrainerCard() {
   useEffect(() => {
     if (!startTime || isFinished) return;
     const interval = setInterval(() => {
-      setElapsedSec(Math.round((Date.now() - startTime) / 1000));
-    }, 500);
+      setElapsedSec(Math.max(1, Math.round((Date.now() - startTime) / 1000)));
+    }, 250);
     return () => clearInterval(interval);
   }, [startTime, isFinished]);
 
   // Расчет скорости (WPM)
   const calculateWPM = useCallback(() => {
-    if (!startTime || elapsedSec === 0) return 0;
+    if (finalStats) return finalStats.wpm;
+    if (!startTime || currentIndex === 0) return 0;
+    const sec = Math.max(0.8, (Date.now() - startTime) / 1000);
     const words = currentIndex / 5;
-    const minutes = elapsedSec / 60;
-    return Math.max(0, Math.round(words / minutes));
-  }, [startTime, elapsedSec, currentIndex]);
+    return Math.max(0, Math.round(words / (sec / 60)));
+  }, [finalStats, startTime, currentIndex]);
 
   // Расчет точности (%)
   const calculateAccuracy = useCallback(() => {
+    if (finalStats) return finalStats.accuracy;
     if (currentIndex === 0 && errors === 0) return 100;
     const total = currentIndex + errors;
     if (total === 0) return 100;
     return Math.max(0, Math.round((currentIndex / total) * 100));
-  }, [currentIndex, errors]);
+  }, [finalStats, currentIndex, errors]);
 
   // Сброс и переход к тексту
   const handleReset = (next = false) => {
     setTypedChars("");
     typedCharsRef.current = "";
     setStartTime(null);
+    startTimeRef.current = null;
     setElapsedSec(0);
     setErrors(0);
+    errorsRef.current = 0;
     setIsFinished(false);
+    setFinalStats(null);
     setPressedKey(null);
     if (next) {
       setTextIndex((prev) => (prev + 1) % SAMPLE_TEXTS.length);
@@ -84,9 +99,11 @@ export function TrainerCard() {
     setPressedKey(upperKey);
     setTimeout(() => setPressedKey(null), 150);
 
+    const now = Date.now();
     // Старт таймера при первом нажатии
-    if (!startTime) {
-      setStartTime(Date.now());
+    if (!startTimeRef.current) {
+      startTimeRef.current = now;
+      setStartTime(now);
     }
 
     const expected = sampleText[typedCharsRef.current.length];
@@ -98,10 +115,33 @@ export function TrainerCard() {
       setTypedChars(nextTyped);
 
       if (nextTyped.length >= sampleText.length) {
+        const durationMs = Math.max(500, now - (startTimeRef.current || now));
+        const exactDuration = Math.max(1, Math.round(durationMs / 1000));
+        const exactWpm = Math.max(1, Math.round((nextTyped.length / 5) / (durationMs / 60000)));
+        const totalKeys = nextTyped.length + errorsRef.current;
+        const exactAccuracy = totalKeys > 0 ? Math.max(0, Math.round((nextTyped.length / totalKeys) * 100)) : 100;
+
+        setElapsedSec(exactDuration);
+        setFinalStats({ wpm: exactWpm, accuracy: exactAccuracy, duration: exactDuration });
         setIsFinished(true);
+
+        saveTypingResult({
+          wpm: exactWpm,
+          accuracy: exactAccuracy,
+          duration_sec: exactDuration,
+          language: "ru",
+          mode: "quick",
+          characters: nextTyped.length,
+          errors: errorsRef.current,
+        }).then(() => {
+          if (currentUser) {
+            fetchLeaderboard();
+          }
+        });
       }
     } else {
-      setErrors((prev) => prev + 1);
+      errorsRef.current += 1;
+      setErrors(errorsRef.current);
     }
   };
 
@@ -149,7 +189,7 @@ export function TrainerCard() {
         setIsFocused(true);
         inputRef.current?.focus();
       }}
-      className="bg-white rounded-[24px] sm:rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-4 sm:p-6 md:p-7 flex flex-col justify-between border border-gray-100 hover:border-yellow-200 transition-all cursor-text relative h-full min-h-[460px]"
+      className="bg-white rounded-[24px] sm:rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-4 sm:p-6 flex flex-col justify-between border border-gray-100 hover:border-yellow-200 transition-all cursor-text relative h-full min-h-[360px] sm:min-h-[420px] xl:min-h-[460px]"
     >
       {/* Невидимый инпут для поддержки мобильного ввода и клавиатуры */}
       <input
@@ -214,17 +254,28 @@ export function TrainerCard() {
       </div>
 
       {/* Область интерактивного текста */}
-      <div className="text-lg sm:text-2xl md:text-3xl leading-relaxed font-medium text-gray-400 min-h-[50px] sm:min-h-[64px] select-none">
+      <div className="text-base sm:text-xl md:text-2xl leading-relaxed font-medium text-gray-400 min-h-[50px] sm:min-h-[64px] select-none break-words my-2">
         {isFinished ? (
-          <div className="flex flex-col items-center justify-center py-2 text-center text-gray-900 animate-fadeIn">
-            <div className="flex items-center gap-2 text-[#D97706] font-bold text-base sm:text-lg mb-1">
+          <div className="flex flex-col items-center justify-center py-2 text-center text-gray-900 animate-fadeIn gap-2">
+            <div className="flex items-center gap-2 text-[#D97706] font-bold text-base sm:text-lg">
               <CheckCircle2 size={20} className="text-[#FFD700]" />
-              <span>Отличный заезд!</span>
+              <span>Отличный заезд! Результат сохранён</span>
             </div>
             <p className="text-xs sm:text-sm text-gray-500">
               Скорость: <strong>{calculateWPM()} СЛ/МИН</strong> | Точность:{" "}
               <strong>{calculateAccuracy()}%</strong>
             </p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleReset(true);
+              }}
+              className="mt-1 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#FFD700] hover:bg-[#FACC15] text-[#111111] font-bold text-xs shadow-xs transition-transform active:scale-95"
+            >
+              <RotateCcw size={13} />
+              <span>Следующая фраза</span>
+            </button>
           </div>
         ) : (
           sampleText.split("").map((char, index) => {
@@ -253,9 +304,9 @@ export function TrainerCard() {
       </div>
 
       {/* Интерактивная подсветка клавиатуры */}
-      <div className="flex flex-col gap-1.5 sm:gap-2 items-center bg-gray-50/90 p-3 sm:p-5 rounded-2xl w-full overflow-hidden select-none">
+      <div className="flex flex-col gap-1 sm:gap-1.5 items-center bg-gray-50/90 p-2 sm:p-4 rounded-2xl w-full overflow-hidden select-none">
         {keyboardRows.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex gap-1 sm:gap-1.5 w-full justify-center">
+          <div key={rowIndex} className="flex gap-0.5 sm:gap-1 w-full justify-center">
             {row.map((key) => {
               const isExpected = !isFinished && key === currentExpectedUpper;
               const isCurrentlyPressed = key === pressedKey;
@@ -271,7 +322,7 @@ export function TrainerCard() {
               return (
                 <div
                   key={key}
-                  className={`${keyBg} flex-1 max-w-[38px] sm:max-w-[46px] h-7 sm:h-9 md:h-11 rounded-md sm:rounded-lg flex items-center justify-center text-[10px] sm:text-xs md:text-sm select-none transition-all duration-100`}
+                  className={`${keyBg} flex-1 min-w-0 max-w-[36px] sm:max-w-[42px] h-7 sm:h-9 md:h-10 rounded-md sm:rounded-lg flex items-center justify-center text-[9px] sm:text-xs select-none transition-all duration-100`}
                 >
                   {key}
                 </div>

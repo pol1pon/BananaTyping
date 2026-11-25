@@ -15,6 +15,15 @@ export class User {
     @Column()
     password!: string;
 
+    @Column({ nullable: true })
+    avatar?: string;
+
+    @Column({ type: 'text', nullable: true })
+    bio?: string;
+
+    @Column({ default: 'user' })
+    role!: string; // 'user' | 'admin'
+
     @OneToMany(() => LeaderBoard, (leaderboard) => leaderboard.user)
     leaderboards!: LeaderBoard[];
 

@@ -38,7 +38,14 @@ export class AuthController {
     });
 
     return {
-      user: { id: user.id, username: user.username, email: user.email },
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        bio: user.bio,
+        role: user.role || 'user',
+      },
       ...token,
     };
   }
@@ -65,7 +72,14 @@ export class AuthController {
     });
 
     return {
-      user: { id: user.id, username: user.username, email: user.email },
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        bio: user.bio,
+        role: user.role || 'user',
+      },
       ...token,
     };
   }

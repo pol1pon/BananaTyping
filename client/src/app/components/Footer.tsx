@@ -1,5 +1,6 @@
-import { Banana, Github, Heart } from "lucide-react";
+import { Github, Heart } from "lucide-react";
 import { Link } from "react-router";
+import { BananaLogo } from "./BananaLogo";
 
 export function Footer() {
   return (
@@ -8,10 +9,10 @@ export function Footer() {
         {/* Бренд и описание */}
         <div className="flex flex-col items-center md:items-start text-center md:text-left max-w-sm">
           <Link to="/" className="flex items-center gap-2 mb-3 text-white group">
-            <div className="text-[#FFD700] transition-transform group-hover:rotate-12 duration-200">
-              <Banana size={24} className="fill-current" />
+            <div className="transition-transform group-hover:rotate-12 duration-200">
+              <BananaLogo size={24} />
             </div>
-            <span className="font-extrabold text-lg tracking-wide">BananaTyping</span>
+            <span className="font-extrabold text-lg tracking-wide group-hover:text-[#FFD700] transition-colors">BananaTyping</span>
           </Link>
           <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
             Современный тренажер слепой десятипальцевой печати с умной генерацией текстов через ИИ и персональной аналитикой прогресса.

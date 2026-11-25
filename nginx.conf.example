@@ -20,6 +20,9 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
+    # Разрешаем загрузку пользовательских аватаров (base64 до 5 МБ)
+    client_max_body_size 5M;
+
     # Gzip сжатие
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;

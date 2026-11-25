@@ -8,7 +8,8 @@ import { client } from './api-client';
 import { 
   authControllerLogin, 
   authControllerRegister, 
-  leaderboardsControllerFindByUserId 
+  leaderboardsControllerFindByUserId,
+  usersControllerUpdate
 } from '../../client/sdk.gen'; 
 
 // Импортируем типы запросов из автогенерации
@@ -21,6 +22,10 @@ export interface User {
   id: number;
   username: string;
   email: string;
+  avatar?: string;
+  bio?: string;
+  role?: 'user' | 'admin' | string;
+  createdAt?: string;
 }
 
 export interface TypingResult {
@@ -30,6 +35,27 @@ export interface TypingResult {
   duration_sec: number;
   createdAt: string;
   language?: 'ru' | 'en';
+  mode?: 'text' | 'time' | 'endless' | 'quick';
+  characters?: number;
+  errors?: number;
+}
+
+export interface SaveTypingResultPayload {
+  wpm: number;
+  accuracy: number;
+  duration_sec: number;
+  language?: 'ru' | 'en';
+  mode?: 'text' | 'time' | 'endless' | 'quick';
+  characters?: number;
+  errors?: number;
+}
+
+export interface UpdateProfilePayload {
+  username?: string;
+  email?: string;
+  avatar?: string;
+  bio?: string;
+  password?: string;
 }
 
 interface AuthState {
@@ -37,6 +63,8 @@ interface AuthState {
   currentUser: User | null;
   token: string | null;
   recentResults: TypingResult[];
+  guestResults: TypingResult[];
+  resultsLoading: boolean;
   isLoading: boolean;
   error: string | null;
 
@@ -45,7 +73,20 @@ interface AuthState {
   register: (credentials: AuthControllerRegisterData['body']) => Promise<void>;
   logout: () => void;
   fetchUserResults: (userId: string | number) => Promise<void>;
+  saveTypingResult: (payload: SaveTypingResultPayload) => Promise<TypingResult | null>;
+  fetchCurrentUser: () => Promise<void>;
+  updateProfile: (data: UpdateProfilePayload) => Promise<User>;
+  claimAdmin: (secretKey: string) => Promise<User>;
   clearError: () => void;
+}
+
+function sortResultsChronologically(items: TypingResult[]): TypingResult[] {
+  return [...items].sort((a, b) => {
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    if (timeA !== timeB) return timeA - timeB;
+    return Number(a.id) - Number(b.id);
+  });
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -55,6 +96,8 @@ export const useAuthStore = create<AuthState>()(
       currentUser: null,
       token: null,
       recentResults: [],
+      guestResults: [],
+      resultsLoading: false,
       isLoading: false,
       error: null,
 
@@ -69,13 +112,12 @@ export const useAuthStore = create<AuthState>()(
             body: credentials
           });
 
-          // Если клиент вернул ошибку (например, 401 или 400), выбрасываем её в блок catch
           if (response.error) {
             throw response.error;
           }
 
           const data = response.data as any; 
-          const token = data?.accessToken; // Соответствует accessToken из NestJS бэкенда
+          const token = data?.accessToken; 
           const user = data?.user;
 
           if (token) {
@@ -86,13 +128,11 @@ export const useAuthStore = create<AuthState>()(
 
           set({ currentUser: user, token, isLoading: false });
           
-          // Если юзер успешно вошел, сразу подтягиваем его историю заездов
           if (user?.id) {
             await get().fetchUserResults(user.id);
           }
         } catch (err: any) {
           console.error('Ошибка при вызове authControllerLogin:', err);
-          // Безопасно извлекаем текст ошибки, отправленный сервером
           const errorMessage = err?.message || err?.response?.data?.message || 'Неверный email или пароль';
           set({ isLoading: false, error: errorMessage });
           throw err;
@@ -111,7 +151,7 @@ export const useAuthStore = create<AuthState>()(
             throw response.error;
           }
 
-          const data = response.data as any;
+          const data = response.data as any; 
           const token = data?.accessToken; 
           const user = data?.user;
         
@@ -130,13 +170,91 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      // Обновление профиля текущего пользователя
+      updateProfile: async (data) => {
+        const { currentUser } = get();
+        if (!currentUser?.id) {
+          throw new Error('Пользователь не авторизован');
+        }
+
+        set({ isLoading: true, error: null });
+        try {
+          const response = await usersControllerUpdate({
+            path: { id: String(currentUser.id) },
+            body: data
+          });
+
+          if (response.error) {
+            throw response.error;
+          }
+
+          const updatedUser = response.data as unknown as User;
+          set({ currentUser: updatedUser, isLoading: false });
+          return updatedUser;
+        } catch (err: any) {
+          console.error('Ошибка при обновлении профиля:', err);
+          const rawMsg = err?.message || err?.response?.data?.message || 'Не удалось обновить профиль';
+          const errorMessage = Array.isArray(rawMsg) ? rawMsg.join(', ') : String(rawMsg);
+          set({ isLoading: false, error: errorMessage });
+          throw new Error(errorMessage);
+        }
+      },
+
+      // Получение прав администратора по секретному ключу / ссылке
+      claimAdmin: async (secretKey: string) => {
+        const { currentUser } = get();
+        if (!currentUser?.id) {
+          throw new Error('Для активации прав администратора войдите в аккаунт');
+        }
+
+        set({ isLoading: true, error: null });
+        try {
+          const response = await client.post<{ data: User }>({
+            url: '/users/claim-admin',
+            body: {
+              userId: currentUser.id,
+              secretKey: secretKey.trim(),
+            },
+          });
+
+          if (response.error) {
+            throw response.error;
+          }
+
+          const updatedUser = (response.data as unknown as User) || { ...currentUser, role: 'admin' };
+          set({ currentUser: updatedUser, isLoading: false });
+          return updatedUser;
+        } catch (err: any) {
+          console.error('Ошибка при активации прав администратора:', err);
+          const rawMsg = err?.message || err?.response?.data?.message || 'Неверный секретный ключ администратора';
+          const errorMessage = Array.isArray(rawMsg) ? rawMsg.join(', ') : String(rawMsg);
+          set({ isLoading: false, error: errorMessage });
+          throw new Error(errorMessage);
+        }
+      },
+
+      // Загрузка свежих данных текущего пользователя
+      fetchCurrentUser: async () => {
+        const { currentUser } = get();
+        if (!currentUser?.id) return;
+
+        try {
+          const response = await client.get<User>({
+            url: `/users/${currentUser.id}`,
+          });
+          if (response.data) {
+            set({ currentUser: response.data as User });
+          }
+        } catch (err) {
+          console.error('Не удалось обновить данные пользователя:', err);
+        }
+      },
+
       // Выход из системы
       logout: () => {
-        // Полностью очищаем заголовок авторизации в API-клиенте
         client.setConfig({
           headers: { Authorization: undefined }
         });
-        // Сбрасываем стейт в исходное состояние
         set({ 
           currentUser: null, 
           token: null, 
@@ -147,6 +265,7 @@ export const useAuthStore = create<AuthState>()(
 
       // Получение истории результатов авторизованного пользователя
       fetchUserResults: async (userId) => {
+        set({ resultsLoading: true });
         try {
           const response = await leaderboardsControllerFindByUserId({
             path: { userId: String(userId) }
@@ -156,21 +275,76 @@ export const useAuthStore = create<AuthState>()(
             throw response.error;
           }
 
-          set({ recentResults: (response.data as unknown as TypingResult[]) || [] });
+          const sorted = sortResultsChronologically((response.data as unknown as TypingResult[]) || []);
+          set({ recentResults: sorted, resultsLoading: false });
         } catch (err) {
           console.error("Не удалось загрузить результаты лидерборда:", err);
+          set({ resultsLoading: false });
+        }
+      },
+
+      // Сохранение нового результата тренировки (в БД для авторизованных или локально для гостя)
+      saveTypingResult: async (payload) => {
+        if (!payload || payload.wpm <= 0) return null;
+
+        const { currentUser, recentResults, guestResults } = get();
+
+        if (currentUser?.id) {
+          try {
+            const response = await client.post<TypingResult>({
+              url: '/leaderboards',
+              body: {
+                userId: Number(currentUser.id),
+                wpm: Math.round(payload.wpm),
+                accuracy: Math.round(payload.accuracy),
+                duration_sec: Math.max(1, Math.round(payload.duration_sec)),
+                ...(payload.language ? { language: payload.language } : {}),
+                ...(payload.mode ? { mode: payload.mode } : {}),
+                ...(payload.characters !== undefined ? { characters: Math.round(payload.characters) } : {}),
+                ...(payload.errors !== undefined ? { errors: Math.round(payload.errors) } : {}),
+              },
+            });
+
+            if (response.error) {
+              throw response.error;
+            }
+
+            const created = response.data as unknown as TypingResult;
+            if (created) {
+              set({ recentResults: sortResultsChronologically([...recentResults, created]) });
+              return created;
+            }
+            await get().fetchUserResults(currentUser.id);
+            return null;
+          } catch (err) {
+            console.error('Ошибка сохранения результата в БД:', err);
+            return null;
+          }
+        } else {
+          const localEntry: TypingResult = {
+            id: Date.now(),
+            wpm: Math.round(payload.wpm),
+            accuracy: Math.round(payload.accuracy),
+            duration_sec: Math.max(1, Math.round(payload.duration_sec)),
+            createdAt: new Date().toISOString(),
+            language: payload.language,
+            mode: payload.mode,
+            characters: payload.characters,
+            errors: payload.errors,
+          };
+          const updated = [...guestResults, localEntry].slice(-50);
+          set({ guestResults: updated });
+          return localEntry;
         }
       }
     }),
     {
-      name: 'banana-typing-auth', // Уникальный ключ для localStorage
-      // Сохраняем в localStorage только пользователя и токен, историю результатов будем запрашивать актуальную
+      name: 'banana-typing-auth',
       partialize: (state) => ({ 
         currentUser: state.currentUser, 
-        token: state.token 
+        token: state.token,
+        guestResults: state.guestResults,
       }),
-      // Метод срабатывает автоматически при первой загрузке приложения,
-      // доставая токен из localStorage и прокидывая его обратно в настройки axios/fetch клиента
       onRehydrateStorage: () => (state) => {
         if (state?.token) {
           client.setConfig({

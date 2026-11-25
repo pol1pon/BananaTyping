@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Banana, Mail, Lock, User, ArrowRight, Loader2 } from "lucide-react";
-import { Link, useNavigate } from "react-router";
+import { Mail, Lock, User, ArrowRight, Loader2 } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "../stores/userStore"; 
+import { BananaLogo } from "../components/BananaLogo"; 
 
 export function Register() {
   const [name, setName] = useState("");
@@ -9,6 +10,9 @@ export function Register() {
   const [password, setPassword] = useState("");
   
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/";
+
   const { register, isLoading, error, clearError } = useAuthStore();
 
   useEffect(() => {
@@ -19,7 +23,7 @@ export function Register() {
     e.preventDefault();
     try {
       await register({ username: name, email, password });
-      navigate("/");
+      navigate(redirectUrl);
     } catch (err) {
       console.error("Ошибка при регистрации:", err);
     }
@@ -32,9 +36,9 @@ export function Register() {
       <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#FFD700]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
       <div className="w-full max-w-md bg-white rounded-[24px] sm:rounded-[32px] p-6 sm:p-8 md:p-10 shadow-2xl relative z-10">
-        <Link to="/" className="inline-flex items-center gap-2 mb-6 sm:mb-8 text-gray-900 hover:opacity-80 transition-opacity">
-          <div className="text-[#FFD700]">
-            <Banana size={30} className="fill-current text-[#111111]" />
+        <Link to="/" className="inline-flex items-center gap-2.5 mb-6 sm:mb-8 text-gray-900 hover:opacity-85 transition-opacity group">
+          <div className="transition-transform group-hover:rotate-12 duration-200">
+            <BananaLogo size={32} />
           </div>
           <span className="font-black text-xl sm:text-2xl tracking-wide text-[#111111]">BananaTyping</span>
         </Link>

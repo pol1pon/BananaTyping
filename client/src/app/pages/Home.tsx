@@ -15,11 +15,11 @@ export function Home() {
               <HeroLeft />
             </div>
 
-            <div className="lg:col-span-7 grid grid-cols-1 xl:grid-cols-3 gap-5 xl:gap-6 items-stretch">
-              <div className="xl:col-span-2 flex flex-col">
+            <div className="lg:col-span-7 grid grid-cols-1 xl:grid-cols-12 gap-5 xl:gap-5 items-stretch">
+              <div className="xl:col-span-7 flex flex-col">
                 <TrainerCard />
               </div>
-              <div className="xl:col-span-1 flex flex-col sm:flex-row xl:flex-col gap-4 sm:gap-5 justify-between">
+              <div className="xl:col-span-5 flex flex-col sm:flex-row xl:flex-col gap-4 sm:gap-5 justify-between">
                 <ProgressWidget />
                 <LeaderboardWidget />
               </div>

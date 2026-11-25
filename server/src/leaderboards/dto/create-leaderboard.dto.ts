@@ -1,5 +1,5 @@
-import { IsNumber, IsNotEmpty } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsIn, IsNumber, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateLeaderboardDto {
   @ApiProperty({ description: 'ID пользователя' })
@@ -21,4 +21,26 @@ export class CreateLeaderboardDto {
   @IsNumber()
   @IsNotEmpty()
   duration_sec!: number;
+
+  @ApiPropertyOptional({ description: 'Язык раскладки (ru / en)' })
+  @IsOptional()
+  @IsString()
+  @IsIn(['ru', 'en'])
+  language?: string;
+
+  @ApiPropertyOptional({ description: 'Режим тренировки (text / time / endless / quick)' })
+  @IsOptional()
+  @IsString()
+  @IsIn(['text', 'time', 'endless', 'quick'])
+  mode?: string;
+
+  @ApiPropertyOptional({ description: 'Количество набранных символов' })
+  @IsOptional()
+  @IsNumber()
+  characters?: number;
+
+  @ApiPropertyOptional({ description: 'Количество ошибок' })
+  @IsOptional()
+  @IsNumber()
+  errors?: number;
 }

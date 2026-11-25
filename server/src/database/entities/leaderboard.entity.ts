@@ -6,7 +6,7 @@ export class LeaderBoard {
     @PrimaryGeneratedColumn()
     id!: number;
 
-    @ManyToOne(() => User, (user) => user.leaderboards)
+    @ManyToOne(() => User, (user) => user.leaderboards, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'userId' })
     user!: User;
 
@@ -21,6 +21,18 @@ export class LeaderBoard {
 
     @Column({ type: 'int' })
     duration_sec!: number;
+
+    @Column({ type: 'varchar', length: 10, nullable: true })
+    language?: string;
+
+    @Column({ type: 'varchar', length: 20, nullable: true })
+    mode?: string;
+
+    @Column({ type: 'int', nullable: true })
+    characters?: number;
+
+    @Column({ type: 'int', nullable: true })
+    errors?: number;
 
     @CreateDateColumn()
     createdAt!: Date;
