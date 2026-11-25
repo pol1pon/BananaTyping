@@ -8,7 +8,6 @@ import { client } from './api-client';
 import { 
   authControllerLogin, 
   authControllerRegister, 
-  leaderboardsControllerFindByUserId,
   usersControllerUpdate
 } from '../../client/sdk.gen'; 
 
@@ -269,15 +268,16 @@ export const useAuthStore = create<AuthState>()(
       fetchUserResults: async (userId) => {
         set({ resultsLoading: true });
         try {
-          const response = await leaderboardsControllerFindByUserId({
-            path: { userId: String(userId) }
+          const response = await client.get<TypingResult[]>({
+            url: `/leaderboards/user/${userId}`,
           });
-          
+
           if (response.error) {
             throw response.error;
           }
 
-          const sorted = sortResultsChronologically((response.data as unknown as TypingResult[]) || []);
+          const rawList = Array.isArray(response.data) ? (response.data as TypingResult[]) : [];
+          const sorted = sortResultsChronologically(rawList);
           set({ recentResults: sorted, resultsLoading: false });
         } catch (err) {
           console.error("Не удалось загрузить результаты лидерборда:", err);

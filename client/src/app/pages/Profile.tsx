@@ -133,16 +133,46 @@ export function Profile() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      setSaveError("Размер файла не должен превышать 2 МБ");
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveError("Размер файла не должен превышать 5 МБ");
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setSelectedAvatar(base64);
-      setSaveError(null);
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) return;
+
+      // Сжимаем аватар до 256x256, чтобы он быстро грузился в топе и не перегружал ответы API
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const targetSize = 256;
+          const canvas = document.createElement("canvas");
+          canvas.width = targetSize;
+          canvas.height = targetSize;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            const minSide = Math.min(img.width, img.height);
+            const sx = (img.width - minSide) / 2;
+            const sy = (img.height - minSide) / 2;
+            ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, targetSize, targetSize);
+            const compressed = canvas.toDataURL("image/jpeg", 0.85);
+            setSelectedAvatar(compressed);
+            setSaveError(null);
+            return;
+          }
+        } catch {
+          // fallback к оригиналу
+        }
+        setSelectedAvatar(dataUrl);
+        setSaveError(null);
+      };
+      img.onerror = () => {
+        setSelectedAvatar(dataUrl);
+        setSaveError(null);
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };
@@ -223,7 +253,7 @@ export function Profile() {
       <div className="absolute top-[-15%] left-[10%] w-[45%] h-[35%] bg-[#FFD700]/10 rounded-full blur-[160px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[5%] w-[35%] h-[30%] bg-amber-500/5 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-5 sm:py-8 relative z-10">
+      <div className="w-full max-w-6xl mx-auto px-3.5 sm:px-6 md:px-8 py-5 sm:py-8 relative z-10 min-w-0">
         {/* Верхняя навигационная панель */}
         <header className="flex flex-wrap items-center justify-between gap-4 pb-6 mb-6 border-b border-white/10">
           <Link to="/" className="flex items-center gap-2.5 group">
@@ -282,8 +312,11 @@ export function Profile() {
         </header>
 
         {/* Hero-карточка профиля пользователя */}
-        <section className="bg-[#18181B] rounded-[28px] sm:rounded-[32px] p-6 sm:p-8 border border-white/10 shadow-2xl relative overflow-hidden mb-6">
-          <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-r from-[#FFD700]/10 via-amber-500/5 to-transparent pointer-events-none" />
+        <section className="bg-gradient-to-br from-[#1B1B20] via-[#17171B] to-[#131317] rounded-[28px] sm:rounded-[32px] p-6 sm:p-8 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.45)] relative overflow-hidden mb-6">
+          {/* Мягкое бесшовное свечение вместо резкой полосы */}
+          <div className="absolute -top-24 -left-16 w-80 h-80 bg-[#FFD700]/12 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 right-10 w-64 h-64 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 left-10 right-10 h-px bg-gradient-to-r from-transparent via-[#FFD700]/45 to-transparent pointer-events-none" />
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             {/* Левая часть: Аватар + имя + ранг + био */}
@@ -294,22 +327,23 @@ export function Profile() {
                 className="relative group shrink-0 rounded-full focus:outline-none"
                 title="Изменить аватар"
               >
+                <div className="absolute -inset-2 rounded-full bg-[#FFD700]/20 blur-xl opacity-75 group-hover:opacity-100 transition-opacity pointer-events-none" />
                 <UserAvatar
                   avatar={currentUser.avatar}
                   username={currentUser.username}
                   size={104}
                   isAdmin={isAdmin}
                   showAdminBadge={true}
-                  className="shadow-[0_0_32px_rgba(255,215,0,0.22)] border-4 border-[#FFD700]"
+                  className="relative shadow-[0_0_32px_rgba(255,215,0,0.22)] border-2 border-[#FFD700] ring-4 ring-[#FFD700]/20"
                 />
                 <div className="absolute inset-0 rounded-full bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <Camera size={22} className="text-[#FFD700]" />
                 </div>
               </button>
 
-              <div className="flex flex-col items-center sm:items-start max-w-xl">
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
-                  <h1 className="text-2xl sm:text-3xl font-black text-white">
+              <div className="flex flex-col items-center sm:items-start max-w-xl w-full min-w-0">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5 max-w-full">
+                  <h1 className="text-2xl sm:text-3xl font-black text-white break-words max-w-full">
                     {currentUser.username}
                   </h1>
                   {isAdmin && (
@@ -335,8 +369,8 @@ export function Profile() {
                   </button>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-xs text-gray-400 mb-3">
-                  <span>{currentUser.email}</span>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-xs text-gray-400 mb-3 max-w-full">
+                  <span className="break-all">{currentUser.email}</span>
                   {currentUser.createdAt && (
                     <span className="inline-flex items-center gap-1 text-gray-500">
                       <Calendar size={12} />
@@ -350,7 +384,7 @@ export function Profile() {
                 </div>
 
                 {currentUser.bio ? (
-                  <p className="text-sm text-gray-300 leading-relaxed bg-[#111111]/70 px-4 py-2.5 rounded-2xl border border-white/5 mb-3 max-w-lg">
+                  <p className="text-sm text-gray-300 leading-relaxed bg-[#111111]/70 px-4 py-2.5 rounded-2xl border border-white/5 mb-3 max-w-lg w-full break-words">
                     {currentUser.bio}
                   </p>
                 ) : (
@@ -388,30 +422,30 @@ export function Profile() {
             </div>
 
             {/* Правая часть: Быстрые метрики и кнопка редактирования */}
-            <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end justify-between gap-3 shrink-0">
-              <div className="flex items-center justify-center gap-2.5">
-                <div className="bg-[#111111] border border-white/10 rounded-2xl px-4 py-2.5 text-center min-w-[82px]">
-                  <div className="text-[10px] uppercase font-bold text-gray-500">Заездов</div>
-                  <div className="text-lg font-black text-white">{stats.totalRuns}</div>
+            <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end justify-between gap-3.5 shrink-0 w-full lg:w-auto">
+              <div className="grid grid-cols-3 gap-2 sm:gap-2.5 w-full sm:w-auto">
+                <div className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl px-2.5 sm:px-3.5 py-2.5 text-center min-w-0 sm:min-w-[84px]">
+                  <div className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Заездов</div>
+                  <div className="text-lg sm:text-xl font-black text-white mt-0.5 tabular-nums">{stats.totalRuns}</div>
                 </div>
-                <div className="bg-[#111111] border border-white/10 rounded-2xl px-4 py-2.5 text-center min-w-[82px]">
-                  <div className="text-[10px] uppercase font-bold text-gray-500">Рекорд</div>
-                  <div className="text-lg font-black text-[#FFD700]">{stats.bestWpm}</div>
+                <div className="bg-gradient-to-b from-[#FFD700]/15 to-white/[0.03] backdrop-blur-sm border border-[#FFD700]/30 rounded-2xl px-2.5 sm:px-3.5 py-2.5 text-center min-w-0 sm:min-w-[84px]">
+                  <div className="text-[10px] uppercase font-bold tracking-wider text-amber-300">Рекорд</div>
+                  <div className="text-lg sm:text-xl font-black text-[#FFD700] mt-0.5 tabular-nums">{stats.bestWpm}</div>
                 </div>
-                <div className="bg-[#111111] border border-white/10 rounded-2xl px-4 py-2.5 text-center min-w-[82px]">
-                  <div className="text-[10px] uppercase font-bold text-gray-500 flex items-center justify-center gap-1">
+                <div className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl px-2.5 sm:px-3.5 py-2.5 text-center min-w-0 sm:min-w-[84px]">
+                  <div className="text-[10px] uppercase font-bold tracking-wider text-gray-400 flex items-center justify-center gap-1">
                     <Flame size={10} className="text-amber-400" /> Серия
                   </div>
-                  <div className="text-lg font-black text-amber-400">{stats.streakDays}д</div>
+                  <div className="text-lg sm:text-xl font-black text-amber-400 mt-0.5 tabular-nums">{stats.streakDays}д</div>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setActiveTab(activeTab === "settings" ? "analytics" : "settings")}
-                className="flex items-center justify-center gap-2 py-2.5 px-5 bg-white/10 hover:bg-white/15 text-white rounded-2xl text-xs sm:text-sm font-bold border border-white/10 transition-all active:scale-95"
+                className="flex items-center justify-center gap-2 py-2.5 px-5 bg-white/[0.08] hover:bg-[#FFD700] hover:text-[#111111] text-white rounded-2xl text-xs sm:text-sm font-bold border border-white/15 hover:border-[#FFD700] transition-all active:scale-95 shadow-sm"
               >
-                <Edit3 size={15} className="text-[#FFD700]" />
+                <Edit3 size={15} />
                 <span>
                   {activeTab === "settings" ? "К статистике" : "Редактировать профиль"}
                 </span>
@@ -420,46 +454,56 @@ export function Profile() {
           </div>
         </section>
 
-        {/* Навигация по вкладкам профиля */}
-        <div className="flex flex-wrap items-center gap-2 mb-6 bg-[#18181B] p-1.5 rounded-2xl border border-white/10 w-full sm:w-fit">
-          <button
-            type="button"
-            onClick={() => setActiveTab("analytics")}
-            className={`flex-1 sm:flex-initial justify-center flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-              activeTab === "analytics"
-                ? "bg-[#FFD700] text-[#111111] shadow-sm"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            <BarChart3 size={16} />
-            <span>Статистика</span>
-          </button>
+        {/* Навигация по вкладкам профиля + быстрая ссылка на публичный вид */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div className="flex flex-wrap items-center gap-1.5 bg-[#18181B]/90 p-1.5 rounded-2xl border border-white/10 w-full sm:w-fit shadow-lg">
+            <button
+              type="button"
+              onClick={() => setActiveTab("analytics")}
+              className={`flex-1 sm:flex-initial justify-center flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                activeTab === "analytics"
+                  ? "bg-[#FFD700] text-[#111111] shadow-sm"
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <BarChart3 size={16} />
+              <span>Статистика</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("history")}
-            className={`flex-1 sm:flex-initial justify-center flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-              activeTab === "history"
-                ? "bg-[#FFD700] text-[#111111] shadow-sm"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            <History size={16} />
-            <span>История ({recentResults.length})</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("history")}
+              className={`flex-1 sm:flex-initial justify-center flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+                activeTab === "history"
+                  ? "bg-[#FFD700] text-[#111111] shadow-sm"
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <History size={16} />
+              <span>История ({recentResults.length})</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("settings")}
-            className={`flex-1 sm:flex-initial justify-center flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-              activeTab === "settings"
-                ? "bg-[#FFD700] text-[#111111] shadow-sm"
-                : "text-gray-400 hover:text-white"
-            }`}
+            <button
+              type="button"
+              onClick={() => setActiveTab("settings")}
+              className={`flex-1 sm:flex-initial justify-center flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+                activeTab === "settings"
+                  ? "bg-[#FFD700] text-[#111111] shadow-sm"
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <Settings size={16} />
+              <span>Настройки</span>
+            </button>
+          </div>
+
+          <Link
+            to={`/player/${currentUser.id}`}
+            className="inline-flex items-center justify-center sm:justify-end gap-1.5 text-xs font-semibold text-gray-400 hover:text-[#FFD700] transition-colors px-2 py-1"
           >
-            <Settings size={16} />
-            <span>Настройки</span>
-          </button>
+            <span>Как меня видят другие игроки</span>
+            <span>→</span>
+          </Link>
         </div>
 
         {/* ВКЛАДКА 1: ПРОДВИНУТАЯ СТАТИСТИКА И АНАЛИТИКА */}
@@ -663,10 +707,40 @@ export function Profile() {
         {activeTab === "settings" && (
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             {/* Форма редактирования профиля */}
-            <div className="lg:col-span-2 bg-[#18181B] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-xl">
-              <div className="flex items-center gap-2.5 mb-6 pb-4 border-b border-white/10">
-                <Edit3 size={20} className="text-[#FFD700]" />
-                <h2 className="text-xl font-bold">Редактирование профиля</h2>
+            <div className="lg:col-span-2 bg-gradient-to-br from-[#1B1B20] to-[#141418] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-xl">
+              <div className="flex items-center justify-between gap-2.5 mb-6 pb-4 border-b border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <Edit3 size={20} className="text-[#FFD700]" />
+                  <h2 className="text-xl font-bold">Редактирование профиля</h2>
+                </div>
+                <span className="text-[11px] font-semibold text-gray-500 hidden sm:inline">
+                  Изменения применяются сразу
+                </span>
+              </div>
+
+              {/* Живое предпросмотр-превью профиля */}
+              <div className="mb-6 p-4 rounded-2xl bg-[#111114] border border-white/10 flex items-center gap-4">
+                <UserAvatar
+                  avatar={selectedAvatar}
+                  username={username || currentUser.username}
+                  size={56}
+                  isAdmin={isAdmin}
+                  showAdminBadge={true}
+                  className="border-2 border-[#FFD700]/70 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-base text-white truncate">
+                      {username.trim() || currentUser.username}
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-amber-300">
+                      Предпросмотр
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 truncate mt-0.5">
+                    {bio.trim() || "Ваше описание профиля появится здесь..."}
+                  </p>
+                </div>
               </div>
 
               <form onSubmit={handleSaveProfile} className="flex flex-col gap-6">
@@ -714,7 +788,7 @@ export function Profile() {
                       className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] hover:bg-white/10 text-white rounded-xl text-xs font-semibold border border-white/15 transition-colors"
                     >
                       <Upload size={14} className="text-[#FFD700]" />
-                      <span>Загрузить своё фото (до 2 МБ)</span>
+                      <span>Загрузить своё фото (до 5 МБ)</span>
                     </button>
 
                     {selectedAvatar && selectedAvatar.startsWith("data:image") && (

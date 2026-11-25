@@ -33,7 +33,6 @@ export function LogoutConfirmModal({
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          onConfirmRef.current();
           return 0;
         }
         return prev - 1;
@@ -42,6 +41,13 @@ export function LogoutConfirmModal({
 
     return () => clearInterval(interval);
   }, [isOpen, durationSeconds]);
+
+  // Вызываем onConfirm отдельно от updater-функции setState, чтобы не триггерить warning React
+  useEffect(() => {
+    if (isOpen && secondsLeft === 0) {
+      onConfirmRef.current();
+    }
+  }, [isOpen, secondsLeft]);
 
   // Закрытие по клавише Escape
   useEffect(() => {

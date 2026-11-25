@@ -93,31 +93,34 @@ export function ProfileStatsSection({ results }: ProfileStatsSectionProps) {
 
   if (!results || results.length === 0) {
     return (
-      <div className="bg-[#18181B] border border-white/10 rounded-3xl p-8 sm:p-12 text-center shadow-xl">
-        <div className="w-16 h-16 rounded-2xl bg-[#FFD700]/10 border border-[#FFD700]/30 text-[#FFD700] flex items-center justify-center mx-auto mb-4">
-          <BarChart3 size={30} />
+      <div className="bg-gradient-to-br from-[#1B1B20] to-[#141418] border border-white/10 rounded-3xl p-8 sm:p-12 text-center shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-32 bg-[#FFD700]/10 blur-3xl pointer-events-none" />
+        <div className="relative z-10">
+          <div className="w-16 h-16 rounded-2xl bg-[#FFD700]/10 border border-[#FFD700]/30 text-[#FFD700] flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <BarChart3 size={30} />
+          </div>
+          <h3 className="text-xl sm:text-2xl font-black text-white mb-2">
+            Статистика ждёт первого заезда
+          </h3>
+          <p className="text-sm text-gray-400 max-w-md mx-auto mb-6 leading-relaxed">
+            Завершите хотя бы одну тренировку, чтобы открыть графики прогресса, анализ стабильности, статистику по дням недели и достижения.
+          </p>
+          <Link
+            to="/training"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#FFD700] hover:bg-[#FACC15] text-[#111111] font-bold text-sm transition-transform active:scale-95 shadow-[0_8px_24px_rgba(255,215,0,0.25)]"
+          >
+            <Keyboard size={18} />
+            <span>Начать тренировку</span>
+          </Link>
         </div>
-        <h3 className="text-xl sm:text-2xl font-black text-white mb-2">
-          Статистика ждёт первого заезда
-        </h3>
-        <p className="text-sm text-gray-400 max-w-md mx-auto mb-6 leading-relaxed">
-          Завершите хотя бы одну тренировку, чтобы открыть графики прогресса, анализ стабильности, статистику по дням недели и достижения.
-        </p>
-        <Link
-          to="/training"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#FFD700] hover:bg-[#FACC15] text-[#111111] font-bold text-sm transition-transform active:scale-95 shadow-lg"
-        >
-          <Keyboard size={18} />
-          <span>Начать тренировку</span>
-        </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 w-full min-w-0">
       {/* 1. 4 карточки ключевых показателей */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full min-w-0">
         {/* Рекорд скорости */}
         <div className="bg-[#18181B] rounded-3xl p-5 border border-white/10 relative overflow-hidden group hover:border-[#FFD700]/40 transition-colors">
           <div className="flex items-center justify-between mb-3">
@@ -227,7 +230,7 @@ export function ProfileStatsSection({ results }: ProfileStatsSectionProps) {
       </div>
 
       {/* 2. Главный график динамики прогресса */}
-      <div className="bg-[#18181B] rounded-3xl p-5 sm:p-7 border border-white/10 shadow-xl">
+      <div className="bg-[#18181B] rounded-3xl p-4 sm:p-7 border border-white/10 shadow-xl w-full min-w-0 overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <h3 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
@@ -390,9 +393,9 @@ export function ProfileStatsSection({ results }: ProfileStatsSectionProps) {
       </div>
 
       {/* 3. Два аналитических блока: Распределение + Режимы/Языки */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full min-w-0">
         {/* Левый: Активность по дням недели / Распределение WPM */}
-        <div className="bg-[#18181B] rounded-3xl p-5 sm:p-6 border border-white/10 shadow-xl flex flex-col justify-between">
+        <div className="bg-[#18181B] rounded-3xl p-4 sm:p-6 border border-white/10 shadow-xl flex flex-col justify-between min-w-0 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
             <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <BarChart3 size={18} className="text-[#FFD700]" />
@@ -498,7 +501,7 @@ export function ProfileStatsSection({ results }: ProfileStatsSectionProps) {
         </div>
 
         {/* Правый: Разбивка по раскладкам и режимам */}
-        <div className="bg-[#18181B] rounded-3xl p-5 sm:p-6 border border-white/10 shadow-xl flex flex-col gap-5">
+        <div className="bg-[#18181B] rounded-3xl p-4 sm:p-6 border border-white/10 shadow-xl flex flex-col gap-5 min-w-0 overflow-hidden">
           <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
             <Keyboard size={18} className="text-[#FFD700]" />
             <span>Раскладки и режимы тренировок</span>
@@ -559,7 +562,7 @@ export function ProfileStatsSection({ results }: ProfileStatsSectionProps) {
       </div>
 
       {/* 4. Достижения игрока */}
-      <div className="bg-[#18181B] rounded-3xl p-5 sm:p-6 border border-white/10 shadow-xl">
+      <div className="bg-[#18181B] rounded-3xl p-4 sm:p-6 border border-white/10 shadow-xl w-full min-w-0 overflow-hidden">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
             <Sparkles size={18} className="text-[#FFD700]" />

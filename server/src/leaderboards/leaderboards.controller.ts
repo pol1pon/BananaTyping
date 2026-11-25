@@ -26,6 +26,14 @@ export class LeaderboardsController {
     return this.leaderboardsService.findAll(period);
   }
 
+  @Get('user/:userId')
+  @ApiOperation({ summary: 'Get leaderboard entries by user ID' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'List of user entries', type: [LeaderBoard] })
+  findByUserId(@Param('userId', ParseIntPipe) userId: number): Promise<LeaderBoard[]> {
+    return this.leaderboardsService.findByUserId(userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get leaderboard entry by ID' })
   @ApiParam({ name: 'id', description: 'Entry ID' })
@@ -33,14 +41,6 @@ export class LeaderboardsController {
   @ApiResponse({ status: 404, description: 'Entry not found' })
   findOne(@Param('id',ParseIntPipe) id: number): Promise<LeaderBoard | null> {
     return this.leaderboardsService.findOne(id);
-  }
-
-  @Get('user/:userId')
-  @ApiOperation({ summary: 'Get leaderboard entries by user ID' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({ status: 200, description: 'List of user entries', type: [LeaderBoard] })
-  findByUserId(@Param('userId', ParseIntPipe) userId: number): Promise<LeaderBoard[]> {
-    return this.leaderboardsService.findByUserId(userId);
   }
 
   @Put(':id')

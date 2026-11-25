@@ -49,9 +49,9 @@ export function AiGeneratorBar({
   isLoading,
 }: AiGeneratorBarProps) {
   return (
-    <div className="bg-gradient-to-r from-amber-500/10 via-yellow-400/10 to-amber-300/10 border border-yellow-200/60 rounded-[20px] sm:rounded-[24px] p-3.5 sm:p-5 mb-6 shadow-sm flex flex-col gap-3.5">
+    <div className="w-full max-w-full overflow-hidden bg-gradient-to-r from-amber-500/10 via-yellow-400/10 to-amber-300/10 border border-yellow-200/60 rounded-[20px] sm:rounded-[24px] p-3.5 sm:p-5 mb-6 shadow-sm flex flex-col gap-3.5">
       {/* 1. Верхний ряд: Переключатель режимов тренировки, параметров длины и настроек текста */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-yellow-200/50 pb-3 min-h-[46px]">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 border-b border-yellow-200/50 pb-3 min-h-[46px]">
         {/* Кнопки режимов */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <span className="text-[11px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider mr-1">
@@ -108,10 +108,10 @@ export function AiGeneratorBar({
         </div>
 
         {/* Настройки выбранного режима и свойства текста (цифры, пунктуация) */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 max-w-full">
           {/* В режиме ТЕКСТ: переключатель длины без пояснения символов */}
           {mode === "text" && (
-            <div className="flex items-center bg-white/90 rounded-xl p-1 border border-yellow-200 text-xs shadow-2xs">
+            <div className="flex flex-wrap items-center bg-white/90 rounded-xl p-1 border border-yellow-200 text-xs shadow-2xs max-w-full">
               {[
                 { len: "short" as const, label: "Короткий" },
                 { len: "medium" as const, label: "Средний" },
@@ -233,23 +233,23 @@ export function AiGeneratorBar({
         </div>
 
         {/* Кнопки генерации нейросетью и случайного текста */}
-        <div className="w-full sm:w-auto grid grid-cols-2 sm:flex items-center gap-2 shrink-0">
+        <div className="w-full sm:w-auto flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
           <button
             onClick={(e) => {
               e.currentTarget.blur();
               onGenerateAi();
             }}
             disabled={isGenerating}
-            className="flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-[#111111] hover:bg-gray-800 text-[#FFD700] font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-[#111111] hover:bg-gray-800 text-[#FFD700] font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
           >
             {isGenerating ? (
               <>
-                <Loader2 size={15} className="animate-spin text-[#FFD700]" />
+                <Loader2 size={15} className="animate-spin text-[#FFD700] shrink-0" />
                 <span>ИИ пишет...</span>
               </>
             ) : (
               <>
-                <Sparkles size={15} />
+                <Sparkles size={15} className="shrink-0" />
                 <span>Сгенерировать с ИИ</span>
               </>
             )}
@@ -261,10 +261,10 @@ export function AiGeneratorBar({
               onNextRandom();
             }}
             disabled={isLoading || isGenerating}
-            className="flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 disabled:opacity-50"
             title="Получить другой готовый текст"
           >
-            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+            <RefreshCw size={14} className={isLoading ? "animate-spin shrink-0" : "shrink-0"} />
             <span>Случайный</span>
           </button>
         </div>

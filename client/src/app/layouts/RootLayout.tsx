@@ -6,7 +6,7 @@ export function RootLayout() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 overflow-x-hidden selection:bg-[#FFD700]/30 flex flex-col">
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 w-full min-w-0">
         <Outlet />
       </main>
       <Footer />

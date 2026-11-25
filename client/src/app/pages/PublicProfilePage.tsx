@@ -107,7 +107,7 @@ export function PublicProfilePage() {
       <div className="absolute top-[-15%] left-[10%] w-[45%] h-[35%] bg-[#FFD700]/10 rounded-full blur-[160px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[5%] w-[35%] h-[30%] bg-amber-500/5 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-5 sm:py-8 relative z-10">
+      <div className="w-full max-w-6xl mx-auto px-3.5 sm:px-6 md:px-8 py-5 sm:py-8 relative z-10 min-w-0">
         {/* Верхняя навигация */}
         <header className="flex flex-wrap items-center justify-between gap-4 pb-6 mb-6 border-b border-white/10">
           <Link to="/" className="flex items-center gap-2.5 group">
@@ -241,23 +241,28 @@ export function PublicProfilePage() {
           /* ОТКРЫТЫЙ ПУБЛИЧНЫЙ ПРОФИЛЬ */
           <div className="flex flex-col gap-6">
             {/* Hero-карточка игрока */}
-            <section className="bg-[#18181B] rounded-[28px] sm:rounded-[32px] p-6 sm:p-8 border border-white/10 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-r from-[#FFD700]/10 via-amber-500/5 to-transparent pointer-events-none" />
+            <section className="bg-gradient-to-br from-[#1B1B20] via-[#17171B] to-[#131317] rounded-[28px] sm:rounded-[32px] p-6 sm:p-8 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.45)] relative overflow-hidden">
+              <div className="absolute -top-24 -left-16 w-80 h-80 bg-[#FFD700]/12 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 right-10 w-64 h-64 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute top-0 left-10 right-10 h-px bg-gradient-to-r from-transparent via-[#FFD700]/45 to-transparent pointer-events-none" />
 
               <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-6 text-center sm:text-left">
-                  <UserAvatar
-                    avatar={profile.avatar}
-                    username={profile.username}
-                    size={100}
-                    isAdmin={isAdmin}
-                    showAdminBadge={true}
-                    className="shadow-[0_0_32px_rgba(255,215,0,0.22)] border-4 border-[#FFD700]"
-                  />
+                  <div className="relative shrink-0">
+                    <div className="absolute -inset-2 rounded-full bg-[#FFD700]/20 blur-xl opacity-75 pointer-events-none" />
+                    <UserAvatar
+                      avatar={profile.avatar}
+                      username={profile.username}
+                      size={100}
+                      isAdmin={isAdmin}
+                      showAdminBadge={true}
+                      className="relative shadow-[0_0_32px_rgba(255,215,0,0.22)] border-2 border-[#FFD700] ring-4 ring-[#FFD700]/20"
+                    />
+                  </div>
 
-                  <div className="flex flex-col items-center sm:items-start max-w-xl">
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
-                      <h1 className="text-2xl sm:text-3xl font-black text-white">
+                  <div className="flex flex-col items-center sm:items-start max-w-xl w-full min-w-0">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5 max-w-full">
+                      <h1 className="text-2xl sm:text-3xl font-black text-white break-words max-w-full">
                         {profile.username}
                       </h1>
                       {isAdmin && (
@@ -318,21 +323,21 @@ export function PublicProfilePage() {
                 </div>
 
                 {/* Быстрые показатели и кнопка в свой кабинет (если свой профиль) */}
-                <div className="flex flex-col items-center lg:items-end gap-3 shrink-0">
-                  <div className="flex items-center justify-center gap-2.5">
-                    <div className="bg-[#111111] border border-white/10 rounded-2xl px-4 py-2.5 text-center min-w-[82px]">
-                      <div className="text-[10px] uppercase font-bold text-gray-500">Заездов</div>
-                      <div className="text-lg font-black text-white">{stats.totalRuns}</div>
+                <div className="flex flex-col items-center lg:items-end gap-3 shrink-0 w-full lg:w-auto">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-2.5 w-full sm:w-auto">
+                    <div className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl px-2.5 sm:px-3.5 py-2.5 text-center min-w-0 sm:min-w-[84px]">
+                      <div className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Заездов</div>
+                      <div className="text-lg sm:text-xl font-black text-white mt-0.5 tabular-nums">{stats.totalRuns}</div>
                     </div>
-                    <div className="bg-[#111111] border border-white/10 rounded-2xl px-4 py-2.5 text-center min-w-[82px]">
-                      <div className="text-[10px] uppercase font-bold text-gray-500">Рекорд</div>
-                      <div className="text-lg font-black text-[#FFD700]">{stats.bestWpm}</div>
+                    <div className="bg-gradient-to-b from-[#FFD700]/15 to-white/[0.03] backdrop-blur-sm border border-[#FFD700]/30 rounded-2xl px-2.5 sm:px-3.5 py-2.5 text-center min-w-0 sm:min-w-[84px]">
+                      <div className="text-[10px] uppercase font-bold tracking-wider text-amber-300">Рекорд</div>
+                      <div className="text-lg sm:text-xl font-black text-[#FFD700] mt-0.5 tabular-nums">{stats.bestWpm}</div>
                     </div>
-                    <div className="bg-[#111111] border border-white/10 rounded-2xl px-4 py-2.5 text-center min-w-[82px]">
-                      <div className="text-[10px] uppercase font-bold text-gray-500 flex items-center justify-center gap-1">
+                    <div className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl px-2.5 sm:px-3.5 py-2.5 text-center min-w-0 sm:min-w-[84px]">
+                      <div className="text-[10px] uppercase font-bold tracking-wider text-gray-400 flex items-center justify-center gap-1">
                         <Flame size={10} className="text-amber-400" /> Серия
                       </div>
-                      <div className="text-lg font-black text-amber-400">{stats.streakDays}д</div>
+                      <div className="text-lg sm:text-xl font-black text-amber-400 mt-0.5 tabular-nums">{stats.streakDays}д</div>
                     </div>
                   </div>
 

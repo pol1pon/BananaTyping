@@ -49,7 +49,6 @@ export class LeaderboardsService {
   findByUserId(userId: number): Promise<LeaderBoard[]> {
     return this.leaderboardRepository.find({
       where: { userId },
-      relations: ['user'],
       order: { createdAt: 'ASC', id: 'ASC' },
     });
   }

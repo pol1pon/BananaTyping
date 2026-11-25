@@ -78,7 +78,11 @@ function findMatchingTopicId(rawTopic: string | null | undefined): string {
     normalized.includes('code') ||
     normalized.includes('coding') ||
     normalized.includes('program') ||
-    normalized.includes('tech')
+    normalized.includes('tech') ||
+    normalized.includes('искусств') ||
+    normalized.includes('нейросет') ||
+    normalized.includes('artificial') ||
+    normalized.includes('intelligence')
   ) {
     return "программирование и IT";
   }
@@ -619,14 +623,14 @@ export function Training() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+    <div className="w-full max-w-5xl mx-auto px-3.5 sm:px-6 py-5 sm:py-10 overflow-x-hidden">
       {/* Навигационная панель страницы (плавно затухает при наборе текста) */}
       <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 transition-opacity duration-300 ${
         status === 'typing' 
           ? 'opacity-25 hover:opacity-100' 
           : 'opacity-100'
       }`}>
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link
             to="/"
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors text-gray-500 shrink-0"
@@ -641,9 +645,9 @@ export function Training() {
           >
             <Trophy size={18} />
           </Link>
-          <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900">Режим тренировки</h1>
-            <p className="text-xs sm:text-sm text-gray-500">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 break-words">Режим тренировки</h1>
+            <p className="text-xs sm:text-sm text-gray-500 break-words">
               Практикуй слепую печать с умной генерацией текстов через ИИ
             </p>
           </div>
@@ -721,7 +725,7 @@ export function Training() {
       <div
         ref={trainerCardRef}
         onClick={() => scrollToTrainer("smooth")}
-        className={`bg-white rounded-[24px] sm:rounded-[32px] p-5 sm:p-7 md:p-9 flex flex-col gap-5 sm:gap-7 transition-all duration-300 border ${
+        className={`w-full max-w-full overflow-hidden bg-white rounded-[24px] sm:rounded-[32px] p-4 sm:p-7 md:p-9 flex flex-col gap-5 sm:gap-7 transition-all duration-300 border ${
           status === 'typing'
             ? 'shadow-[0_16px_48px_rgba(255,215,0,0.22)] border-amber-300 ring-4 ring-[#FFD700]/30'
             : 'shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-gray-100'
@@ -768,54 +772,54 @@ export function Training() {
 
         {/* Панель статистики в реальном времени */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-5 sm:pb-6">
-          <div className="grid grid-cols-3 sm:flex gap-2 sm:gap-10 w-full sm:w-auto">
+          <div className="grid grid-cols-3 sm:flex gap-2 sm:gap-10 w-full sm:w-auto min-w-0">
             {/* Скорость WPM */}
-            <div className="flex items-center gap-2.5 sm:gap-4">
-              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
-                <Zap size={20} className={status === 'typing' ? "text-[#FFD700]" : ""} />
+            <div className="flex items-center gap-1.5 sm:gap-4 min-w-0">
+              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
+                <Zap size={18} className={status === 'typing' ? "text-[#FFD700]" : ""} />
               </div>
-              <div>
-                <div className="text-gray-400 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider mb-0.5">
+              <div className="min-w-0">
+                <div className="text-gray-400 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider mb-0.5 truncate">
                   Скорость
                 </div>
-                <div className="text-lg sm:text-2xl font-black text-gray-900">
+                <div className="text-base sm:text-2xl font-black text-gray-900 truncate">
                   {finalResult ? finalResult.wpm : calculateWPM()}{" "}
-                  <span className="text-gray-500 text-xs sm:text-sm font-medium">СЛ/МИН</span>
+                  <span className="text-gray-500 text-[10px] sm:text-sm font-medium">WPM</span>
                 </div>
               </div>
             </div>
 
             {/* Точность % */}
-            <div className="flex items-center gap-2.5 sm:gap-4">
-              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
-                <Target size={20} className={status === 'typing' ? "text-[#FFD700]" : ""} />
+            <div className="flex items-center gap-1.5 sm:gap-4 min-w-0">
+              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
+                <Target size={18} className={status === 'typing' ? "text-[#FFD700]" : ""} />
               </div>
-              <div>
-                <div className="text-gray-400 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider mb-0.5">
+              <div className="min-w-0">
+                <div className="text-gray-400 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider mb-0.5 truncate">
                   Точность
                 </div>
-                <div className="text-lg sm:text-2xl font-black text-gray-900">
+                <div className="text-base sm:text-2xl font-black text-gray-900 truncate">
                   {finalResult ? finalResult.accuracy : calculateAccuracy()}%
                 </div>
               </div>
             </div>
 
             {/* Время / Таймер обратного отсчета */}
-            <div className="flex items-center gap-2.5 sm:gap-4">
-              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-4 min-w-0">
+              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
                 {mode === 'time' ? (
-                  <Clock size={20} className={timeLeft <= 5 && status === 'typing' ? "text-red-500 animate-bounce" : status === 'typing' ? "text-[#D97706]" : ""} />
+                  <Clock size={18} className={timeLeft <= 5 && status === 'typing' ? "text-red-500 animate-bounce" : status === 'typing' ? "text-[#D97706]" : ""} />
                 ) : mode === 'endless' ? (
-                  <InfinityIcon size={20} className={status === 'typing' ? "text-[#D97706] animate-pulse" : ""} />
+                  <InfinityIcon size={18} className={status === 'typing' ? "text-[#D97706] animate-pulse" : ""} />
                 ) : (
-                  <Clock size={20} className={status === 'typing' ? "text-[#FFD700]" : ""} />
+                  <Clock size={18} className={status === 'typing' ? "text-[#FFD700]" : ""} />
                 )}
               </div>
-              <div>
-                <div className="text-gray-400 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider mb-0.5">
+              <div className="min-w-0">
+                <div className="text-gray-400 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider mb-0.5 truncate">
                   {mode === 'time' ? 'Осталось' : 'Время'}
                 </div>
-                <div className={`text-lg sm:text-2xl font-black ${mode === 'time' && timeLeft <= 5 && status === 'typing' ? 'text-red-600 animate-pulse' : 'text-gray-900'}`}>
+                <div className={`text-base sm:text-2xl font-black truncate ${mode === 'time' && timeLeft <= 5 && status === 'typing' ? 'text-red-600 animate-pulse' : 'text-gray-900'}`}>
                   {mode === 'time'
                     ? `${timeLeft}с`
                     : formatDuration(calculateDurationSec())}

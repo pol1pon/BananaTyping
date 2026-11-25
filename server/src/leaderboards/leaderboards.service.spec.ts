@@ -80,7 +80,6 @@ describe('LeaderboardsService', () => {
     await service.findByUserId(5);
     expect(mockRepo.find).toHaveBeenCalledWith({
       where: { userId: 5 },
-      relations: ['user'],
       order: { createdAt: 'ASC', id: 'ASC' },
     });
   });
