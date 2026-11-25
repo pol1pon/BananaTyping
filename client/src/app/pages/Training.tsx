@@ -157,7 +157,7 @@ export function Training() {
     error,
     fetchRandomText, 
     generateAiText, 
-    fetchHistory,
+    prefetchAiText,
     clearError
   } = useTextStore();
 
@@ -224,8 +224,22 @@ export function Training() {
   // Первоначальная загрузка уникального текста
   useEffect(() => {
     fetchRandomText(lang, currentTextId || undefined);
-    fetchHistory(lang);
-  }, [lang, fetchRandomText, fetchHistory]);
+  }, [lang, fetchRandomText]);
+
+  // Фоновый прогрев следующего ИИ-текста под текущие настройки (для 0мс выдачи по клику)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void prefetchAiText({
+        language: lang,
+        topic: selectedTopic,
+        length: mode === 'endless' ? 'long' : selectedLength,
+        difficulty: 'medium',
+        includeNumbers,
+        includePunctuation,
+      });
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [lang, selectedTopic, selectedLength, mode, includeNumbers, includePunctuation, prefetchAiText]);
 
   // Синхронизация активного текста и темы при изменении currentText / currentTopic
   useEffect(() => {
@@ -538,7 +552,6 @@ export function Training() {
         includePunctuation,
       });
       setActiveText(text);
-      await fetchHistory(lang);
       reset();
       setTimeout(() => focusMobileInput(), 80);
     } catch (err) {
@@ -558,7 +571,6 @@ export function Training() {
         includePunctuation,
       });
       setActiveText(text);
-      await fetchHistory(lang);
       reset();
       setTimeout(() => focusMobileInput(), 80);
     } catch (err) {

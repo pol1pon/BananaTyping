@@ -24,6 +24,9 @@ export class User {
     @Column({ default: 'user' })
     role!: string; // 'user' | 'admin'
 
+    @Column({ default: false })
+    isPrivate!: boolean;
+
     @OneToMany(() => LeaderBoard, (leaderboard) => leaderboard.user)
     leaderboards!: LeaderBoard[];
 

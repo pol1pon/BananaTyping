@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GenerateTextDto } from './dto/generate-text.dto';
 
-interface GeneratedResult {
+export interface GeneratedResult {
   text: string;
   source: string;
   topic: string;
@@ -13,31 +13,143 @@ interface GeneratedResult {
 export class AiTextService {
   private readonly logger = new Logger(AiTextService.name);
 
+  // Серверный пул предсгенерированных ИИ-текстов для мгновенной отдачи (< 1мс)
+  private readonly prefetchPool = new Map<string, GeneratedResult[]>();
+  private readonly inflightWarmups = new Set<string>();
+  private static readonly MAX_POOL_SIZE_PER_KEY = 2;
+
   constructor(private readonly configService: ConfigService) {}
 
+  private buildCacheKey(options: Required<Pick<GenerateTextDto, 'language' | 'topic' | 'difficulty' | 'length' | 'includeNumbers' | 'includePunctuation'>>): string {
+    return `${options.language}|${options.topic.trim().toLowerCase()}|${options.difficulty}|${options.length}|${options.includeNumbers}|${options.includePunctuation}`;
+  }
+
   /**
-   * Генерация текста через ИИ
+   * Мгновенная выдача текста из предзагруженного пула или быстрая генерация через ИИ
    */
   async generateText(options: GenerateTextDto = {}): Promise<GeneratedResult> {
-    const language = options.language || 'ru';
-    const topic = options.topic || (language === 'ru' ? 'случайная тема' : 'random');
-    const difficulty = options.difficulty || 'medium';
-    const length = options.length || 'medium';
-    const includeNumbers = options.includeNumbers ?? false;
-    const includePunctuation = options.includePunctuation ?? true;
+    const normalized = {
+      language: (options.language || 'ru') as 'ru' | 'en',
+      topic: options.topic || (options.language === 'en' ? 'random' : 'случайная тема'),
+      difficulty: (options.difficulty || 'medium') as 'easy' | 'medium' | 'hard',
+      length: (options.length || 'medium') as 'short' | 'medium' | 'long',
+      includeNumbers: options.includeNumbers ?? false,
+      includePunctuation: options.includePunctuation ?? true,
+    };
 
-    // 1. Если задан GEMINI_API_KEY, в первую очередь используем Google Gemini (быстро и качественно)
+    const key = this.buildCacheKey(normalized);
+    const pooled = this.prefetchPool.get(key);
+
+    if (pooled && pooled.length > 0) {
+      const ready = pooled.shift()!;
+      this.logger.debug(`Мгновенная выдача текста из пула (ключ: ${key}, осталось: ${pooled.length})`);
+      // Фоново пополняем пул для следующего запроса
+      this.warmPoolInBackground(key, normalized);
+      return ready;
+    }
+
+    const result = await this.generateFresh(normalized);
+
+    // После первой генерации сразу прогреваем запасной текст в фоне
+    this.warmPoolInBackground(key, normalized);
+
+    return result;
+  }
+
+  /**
+   * Фоновое пополнение пула (не блокирует ответ клиенту и не запускается в test-окружении)
+   */
+  private warmPoolInBackground(
+    key: string,
+    normalized: {
+      language: 'ru' | 'en';
+      topic: string;
+      difficulty: 'easy' | 'medium' | 'hard';
+      length: 'short' | 'medium' | 'long';
+      includeNumbers: boolean;
+      includePunctuation: boolean;
+    },
+  ): void {
+    if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
+      return;
+    }
+
+    const existing = this.prefetchPool.get(key) || [];
+    if (existing.length >= AiTextService.MAX_POOL_SIZE_PER_KEY || this.inflightWarmups.has(key)) {
+      return;
+    }
+
+    this.inflightWarmups.add(key);
+    this.generateFresh(normalized)
+      .then((res) => {
+        // Кладём в пул только живые ИИ-результаты (локальный фолбэк и так мгновенный)
+        if (!res.source.includes('local-fallback')) {
+          const list = this.prefetchPool.get(key) || [];
+          if (list.length < AiTextService.MAX_POOL_SIZE_PER_KEY) {
+            list.push(res);
+            this.prefetchPool.set(key, list);
+          }
+        }
+      })
+      .catch(() => {
+        // Фоновый прогрев не должен ронять процесс
+      })
+      .finally(() => {
+        this.inflightWarmups.delete(key);
+      });
+  }
+
+  /**
+   * Непосредственная генерация с жёсткими короткими таймаутами и выбором самого быстрого провайдера
+   */
+  private async generateFresh(normalized: {
+    language: 'ru' | 'en';
+    topic: string;
+    difficulty: 'easy' | 'medium' | 'hard';
+    length: 'short' | 'medium' | 'long';
+    includeNumbers: boolean;
+    includePunctuation: boolean;
+  }): Promise<GeneratedResult> {
+    const { language, topic, difficulty, length, includeNumbers, includePunctuation } = normalized;
+
+    // 1. Groq (самый быстрый LLM-инференс ~200–400мс), если задан GROQ_API_KEY
+    const groqKey = this.configService.get<string>('GROQ_API_KEY');
+    if (groqKey) {
+      try {
+        const textFromGroq = await this.callGroqAi(
+          groqKey,
+          language,
+          topic,
+          difficulty,
+          length,
+          includeNumbers,
+          includePunctuation,
+        );
+        if (textFromGroq && textFromGroq.length > 20) {
+          return {
+            text: this.cleanGeneratedText(textFromGroq, includeNumbers, includePunctuation),
+            source: 'ai (groq)',
+            topic,
+            language,
+          };
+        }
+      } catch (err: any) {
+        this.logger.warn(`Groq API error: ${err?.message || err}`);
+      }
+    }
+
+    // 2. Google Gemini (быстрый flash-lite с отключённым thinkingBudget для минимальной задержки)
     const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (geminiKey) {
       try {
         const textFromGemini = await this.callGeminiAi(
-          geminiKey, 
-          language, 
-          topic, 
-          difficulty, 
-          length, 
-          includeNumbers, 
-          includePunctuation
+          geminiKey,
+          language,
+          topic,
+          difficulty,
+          length,
+          includeNumbers,
+          includePunctuation,
         );
         if (textFromGemini && textFromGemini.length > 20) {
           return {
@@ -52,15 +164,15 @@ export class AiTextService {
       }
     }
 
-    // 2. Резервный провайдер Pollinations.ai
+    // 3. Резервный провайдер Pollinations.ai (быстрая модель openai-fast + таймаут 3.2с)
     try {
       const textFromPollinations = await this.callPollinationsAi(
-        language, 
-        topic, 
-        difficulty, 
-        length, 
-        includeNumbers, 
-        includePunctuation
+        language,
+        topic,
+        difficulty,
+        length,
+        includeNumbers,
+        includePunctuation,
       );
       if (textFromPollinations && textFromPollinations.length > 20) {
         return {
@@ -71,17 +183,17 @@ export class AiTextService {
         };
       }
     } catch (err: any) {
-      this.logger.warn(`Pollinations AI error or timeout: ${err?.message || err}.`);
+      this.logger.warn(`Pollinations AI timeout/error: ${err?.message || err}.`);
     }
 
-    // 3. Если сеть недоступна (офлайн/песочница/сбой API), используем локальный генератор текстов
-    this.logger.log('Используется локальный генератор текстов для слепой печати');
+    // 4. Мгновенный тематический локальный генератор
+    this.logger.log('Используется быстрый локальный генератор текстов');
     const localText = this.generateLocalFallbackText(
-      language, 
-      topic, 
-      length, 
-      includeNumbers, 
-      includePunctuation
+      language,
+      topic,
+      length,
+      includeNumbers,
+      includePunctuation,
     );
     return {
       text: localText,
@@ -91,98 +203,175 @@ export class AiTextService {
     };
   }
 
-  /**
-   * Получить словесное описание диапазона символов для промпта
-   * Короткий: 150 - 200 символов
-   * Средний: 201 - 290 символов
-   * Длинный: 291 - 400 символов
-   */
   private getLengthGuide(length: string, language: string): string {
     if (language === 'ru') {
       switch (length) {
         case 'short':
-          return 'от 150 до 200 символов (включая пробелы)';
+          return '150–200 символов';
         case 'long':
-          return 'от 291 до 400 символов (включая пробелы)';
+          return '290–390 символов';
         case 'medium':
         default:
-          return 'от 201 до 290 символов (включая пробелы)';
+          return '200–285 символов';
       }
-    } else {
-      switch (length) {
-        case 'short':
-          return 'between 150 and 200 characters (including spaces)';
-        case 'long':
-          return 'between 291 and 400 characters (including spaces)';
-        case 'medium':
-        default:
-          return 'between 201 and 290 characters (including spaces)';
-      }
+    }
+    switch (length) {
+      case 'short':
+        return '150-200 chars';
+      case 'long':
+        return '290-390 chars';
+      case 'medium':
+      default:
+        return '200-285 chars';
     }
   }
 
-  /**
-   * Сформировать правила пунктуации и цифр для промпта
-   */
-  private formatTextRules(includeNumbers: boolean, includePunctuation: boolean, language: string): string {
+  private buildCompactPrompt(
+    language: string,
+    topic: string,
+    difficulty: string,
+    length: string,
+    includeNumbers: boolean,
+    includePunctuation: boolean,
+  ): string {
+    const len = this.getLengthGuide(length, language);
     if (language === 'ru') {
-      let rules = '';
-      if (includeNumbers) {
-        rules += 'Обязательно включи в текст несколько цифр или чисел (например, 2026, 100%, 42, 5-10).\n';
-      } else {
-        rules += 'Не используй цифры, пиши всё только буквами.\n';
+      const numRule = includeNumbers ? 'Включи 2-3 числа.' : 'Без цифр.';
+      const punctRule = includePunctuation ? 'Обычная пунктуация.' : 'БЕЗ знаков препинания.';
+      return `Напиши связный текст на русском для тренажёра печати. Тема: "${topic}". Длина: ${len}. Сложность: ${difficulty}. ${numRule} ${punctRule} Верни ТОЛЬКО готовый текст без кавычек и пояснений.`;
+    }
+    const numRule = includeNumbers ? 'Include 2-3 numbers.' : 'No digits.';
+    const punctRule = includePunctuation ? 'Standard punctuation.' : 'NO punctuation marks.';
+    return `Write a coherent English typing test paragraph. Topic: "${topic}". Length: ${len}. Difficulty: ${difficulty}. ${numRule} ${punctRule} Output ONLY raw text without quotes.`;
+  }
+
+  /**
+   * Провайдер Groq (если задан GROQ_API_KEY)
+   */
+  private async callGroqAi(
+    apiKey: string,
+    language: string,
+    topic: string,
+    difficulty: string,
+    length: string,
+    includeNumbers: boolean,
+    includePunctuation: boolean,
+  ): Promise<string> {
+    const prompt = this.buildCompactPrompt(language, topic, difficulty, length, includeNumbers, includePunctuation);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2800);
+
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey.trim()}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 220,
+          temperature: 0.9,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
       }
 
-      if (!includePunctuation) {
-        rules += 'НЕ используй знаки препинания (без точек, запятых, тире и кавычек). Разделяй слова только одиночными пробелами.\n';
-      } else {
-        rules += 'Используй стандартную пунктуацию (точки, запятые, тире).\n';
-      }
-      return rules;
-    } else {
-      let rules = '';
-      if (includeNumbers) {
-        rules += 'Include several numbers or digits in the text (e.g. 2026, 100%, 42).\n';
-      } else {
-        rules += 'Do not use digits or numbers, spell out everything in words.\n';
-      }
-
-      if (!includePunctuation) {
-        rules += 'Do NOT use punctuation marks (no periods, commas, dashes, quotes). Separate words only with single spaces.\n';
-      } else {
-        rules += 'Use standard punctuation (periods, commas, dashes).\n';
-      }
-      return rules;
+      const data: any = await res.json();
+      return (data?.choices?.[0]?.message?.content || '').trim();
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
   /**
-   * Провайдер Pollinations.ai (без необходимости API-ключа)
+   * Google Gemini: параллельная гонка быстрых моделей Flash-Lite без траты времени на thinking-токены
+   */
+  private async callGeminiAi(
+    apiKey: string,
+    language: string,
+    topic: string,
+    difficulty: string,
+    length: string,
+    includeNumbers: boolean,
+    includePunctuation: boolean,
+  ): Promise<string> {
+    const cleanKey = apiKey.trim();
+    const promptText = this.buildCompactPrompt(language, topic, difficulty, length, includeNumbers, includePunctuation);
+
+    const requestModel = async (model: string, disableThinking: boolean): Promise<string> => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3200);
+
+      try {
+        const generationConfig: Record<string, any> = {
+          maxOutputTokens: 220,
+          temperature: 0.9,
+        };
+        if (disableThinking) {
+          generationConfig.thinkingConfig = { thinkingBudget: 0 };
+        }
+
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: promptText }] }],
+              generationConfig,
+            }),
+            signal: controller.signal,
+          },
+        );
+
+        if (!res.ok) {
+          throw new Error(`Gemini (${model}) HTTP ${res.status}`);
+        }
+
+        const data: any = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text || text.trim().length <= 15) {
+          throw new Error(`Gemini (${model}) empty response`);
+        }
+        return text.trim();
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+
+    // Гонка: берём первый успешный ответ среди самых быстрых Flash-Lite моделей
+    return Promise.any([
+      requestModel('gemini-2.5-flash-lite', true),
+      requestModel('gemini-flash-lite-latest', false),
+    ]);
+  }
+
+  /**
+   * Pollinations.ai с быстрой моделью openai-fast и жёстким таймаутом 3.2с
    */
   private async callPollinationsAi(
     language: string,
     topic: string,
     difficulty: string,
     length: string,
-    includeNumbers: boolean = false,
-    includePunctuation: boolean = true,
+    includeNumbers: boolean,
+    includePunctuation: boolean,
   ): Promise<string> {
-    const lengthGuide = this.getLengthGuide(length, language);
-    const rules = this.formatTextRules(includeNumbers, includePunctuation, language);
-
-    const prompt = language === 'ru'
-      ? `Напиши связный, грамотный и интересный текст для тренажера скоропечатания на русском языке. Тема: "${topic}". Длина: СТРОГО ${lengthGuide}. Сложность: ${difficulty}.\n${rules}Не используй кавычки вокруг всего текста, не пиши приветствий или объяснений, выведи ТОЛЬКО сам текст для набора.`
-      : `Write a coherent, inspiring typing test paragraph in English. Topic: "${topic}". Length: STRICTLY ${lengthGuide}. Difficulty: ${difficulty}.\n${rules}Output ONLY the raw text to type, no intro, no markdown quotes.`;
-
+    const prompt = this.buildCompactPrompt(language, topic, difficulty, length, includeNumbers, includePunctuation);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
+    const timeout = setTimeout(() => controller.abort(), 3200);
 
     try {
-      const url = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=openai&seed=${Date.now()}`;
+      const url = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=openai-fast&seed=${Date.now()}`;
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Accept': 'text/plain',
+          Accept: 'text/plain',
           'User-Agent': 'BananaTyping/1.0',
         },
         signal: controller.signal,
@@ -198,105 +387,30 @@ export class AiTextService {
     }
   }
 
-  /**
-   * Запрос к Google Gemini с авто-подбором актуальной модели (gemini-3.5-flash / gemini-3.5-flash-lite)
-   */
-  private async callGeminiAi(
-    apiKey: string,
-    language: string,
-    topic: string,
-    difficulty: string,
-    length: string,
+  private cleanGeneratedText(
+    raw: string,
     includeNumbers: boolean = false,
     includePunctuation: boolean = true,
-  ): Promise<string> {
-    const cleanKey = apiKey.trim();
-    const lengthGuide = this.getLengthGuide(length, language);
-    const rules = this.formatTextRules(includeNumbers, includePunctuation, language);
-
-    const promptText = language === 'ru'
-      ? `Напиши связный текст для тренажера скоропечатания на русском языке на тему "${topic}".\nДлина: СТРОГО ${lengthGuide}.\nСложность: ${difficulty}.\n${rules}\nВыведи ТОЛЬКО текст для набора без кавычек и комментариев.`
-      : `Write a coherent paragraph for typing practice in English on the topic "${topic}".\nLength: STRICTLY ${lengthGuide}.\nDifficulty: ${difficulty}.\n${rules}\nOutput ONLY the text to type without quotes or intro.`;
-
-    const modelsToTry = [
-      'gemini-flash-lite-latest',
-      'gemini-3-flash-preview',
-      'gemini-3.5-flash-lite',
-      'gemini-3.5-flash',
-    ];
-
-    for (const model of modelsToTry) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: promptText }] }],
-            }),
-            signal: controller.signal,
-          },
-        );
-
-        if (res.ok) {
-          const data: any = await res.json();
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text && text.trim().length > 15) {
-            return text.trim();
-          }
-        } else {
-          const errData: any = await res.json().catch(() => ({}));
-          this.logger.warn(
-            `Gemini (${model}) HTTP ${res.status}: ${errData?.error?.message || res.statusText}`,
-          );
-        }
-      } catch (err: any) {
-        this.logger.warn(`Попытка генерации через Gemini (${model}) не удалась: ${err?.message || err}`);
-      } finally {
-        clearTimeout(timeout);
-      }
-    }
-
-    return '';
-  }
-
-  /**
-   * Очистка ответа от вводных фраз, кавычек и markdown, а также соблюдение настроек пунктуации и цифр
-   */
-  private cleanGeneratedText(
-    raw: string, 
-    includeNumbers: boolean = false, 
-    includePunctuation: boolean = true
   ): string {
     let clean = raw.trim();
 
-    // Удаляем markdown разметку ```...```
     if (clean.startsWith('```') && clean.endsWith('```')) {
       clean = clean.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '').trim();
     }
 
-    // Удаляем типовые вступительные слова нейросетей
     clean = clean.replace(/^(Вот текст для (тренировки|набора|слепой печати|тебя):?\s*)/i, '');
     clean = clean.replace(/^(Here is a (text|paragraph|typing practice):?\s*)/i, '');
 
-    // Удаляем внешние кавычки
     if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith('«') && clean.endsWith('»'))) {
       clean = clean.slice(1, -1).trim();
     }
 
-    // Нормализуем пробелы и переносы
     clean = clean.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
 
-    // Если знаки пунктуации отключены: удаляем все знаки препинания
     if (!includePunctuation) {
       clean = clean.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"'«»—–]/g, '').replace(/\s{2,}/g, ' ').trim();
     }
 
-    // Если цифры отключены: удаляем цифры
     if (!includeNumbers) {
       clean = clean.replace(/[0-9]/g, '').replace(/\s{2,}/g, ' ').trim();
     }
@@ -305,70 +419,95 @@ export class AiTextService {
   }
 
   /**
-   * Умный динамический генератор при отсутствии интернета или недоступности внешних API
-   * Поддерживает точные размеры:
-   * Короткий: 150 - 200 символов
-   * Средний: 201 - 290 символов
-   * Длинный: 291 - 400 символов
+   * Быстрый тематический локальный генератор с учётом выбранной темы, языка и длины
    */
   private generateLocalFallbackText(
-    language: string, 
-    topic?: string, 
+    language: string,
+    topic: string = '',
     length: string = 'medium',
     includeNumbers: boolean = false,
-    includePunctuation: boolean = true
+    includePunctuation: boolean = true,
   ): string {
     const isRu = language === 'ru';
+    const normTopic = topic.toLowerCase();
 
-    // Короткие тексты (150 - 200 символов)
-    const ruShort = [
-      'Бананы содержат много калия и витаминов, которые стимулируют работу мозга, укрепляют память и заметно улучшают концентрацию при скоростной печати на клавиатуре.',
-      'Регулярные тренировки слепого десятипальцевого метода позволяют печатать со скоростью мысли и значительно экономить драгоценное время при повседневной работе с кодом.',
-      'В бескрайнем космосе сияют миллиарды далеких звезд, а современные космические телескопы ежедневно открывают удивительные и захватывающие тайны нашей Вселенной.'
-    ];
+    const ruPools: Record<string, string[]> = {
+      banana: [
+        'Спелый банан содержит много калия и витаминов, которые стимулируют работу мозга и заряжают энергией для быстрой печати.',
+        'Банановый коктейль перед тренировкой поднимает настроение и помогает пальцам легко скользить по клавишам без единой опечатки.',
+        'Если бы клавиатуры росли на пальмах рядом с бананами, каждый программист печатал бы со скоростью молнии каждый рабочий день.',
+      ],
+      it: [
+        'Чистый и понятный код пишется намного быстрее, когда пальцы уверенно находят нужные клавиши вслепую без взгляда на клавиатуру.',
+        'Современная веб-разработка объединяет реактивные интерфейсы, асинхронные потоки данных и надёжную архитектуру серверных сервисов.',
+        'Опытный разработчик ценит простоту решений, автоматические тесты и удобные инструменты, экономящие часы работы всей команды.',
+      ],
+      space: [
+        'В бескрайнем космосе сияют миллиарды далёких звёзд, а современные орбитальные телескопы ежедневно открывают тайны нашей Вселенной.',
+        'Исследование марсианских долин и далёких ледяных спутников вдохновляет инженеров создавать умные автономные космические аппараты.',
+        'Квантовые алгоритмы и лазерная связь выводят скорость передачи научных данных на совершенно новый фантастический уровень.',
+      ],
+      quotes: [
+        'Спокойствие и ровный ритм движений всегда побеждают спешку, потому что высокая точность со временем превращается в рекордную скорость.',
+        'Маленькие ежедневные тренировки формируют прочную мышечную память, которая остаётся с вами на долгие годы продуктивной работы.',
+        'Умение быстро переносить свои мысли на экран освобождает внимание для самых смелых идей, творчества и сложных проектов.',
+      ],
+    };
 
-    // Средние тексты (201 - 290 символов)
-    const ruMedium = [
-      'Бананы дарят заряд энергии на весь день. Регулярная практика слепого набора развивает моторику пальцев, ускоряет мышление и помогает легко переносить любые творческие мысли прямо на экран компьютера без лишнего напряжения.',
-      'Искусственный интеллект открывает новые горизонты в программировании. Чистый код и уверенное владение клавиатурой экономят часы работы, позволяя всецело сосредоточиться на создании действительно полезных и красивых цифровых решений.',
-      'Современная веб-разработка сочетает в себе эстетику интерфейсов, реактивные компоненты и надежные базы данных для миллионов пользователей по всему миру. Главное — писать читаемый, надежный и легко масштабируемый программный код.'
-    ];
+    const enPools: Record<string, string[]> = {
+      banana: [
+        'Ripe bananas are rich in potassium and vitamins that keep your mind sharp and energized during fast touch typing sessions.',
+        'A fresh banana smoothie in the morning brings natural fuel for building creative applications without typos or fatigue.',
+        'If keyboards grew on tropical palm trees beside bananas, every developer would comfortably type five hundred characters per minute.',
+      ],
+      it: [
+        'Clean and maintainable code flows naturally onto the screen when your fingers move effortlessly across every row without looking down.',
+        'Modern web engineering combines reactive user interfaces, asynchronous pipelines, and resilient backend architectures for millions of users.',
+        'Great software developers appreciate simplicity, automated testing, and reliable tools that save valuable hours every single week.',
+      ],
+      space: [
+        'Billions of distant stars shine across deep space while orbital observatories uncover remarkable mysteries of our expanding universe.',
+        'Exploring Martian canyons and icy moons inspires aerospace engineers to build clever autonomous robots for distant voyages.',
+        'Optical laser communication and quantum computing push scientific data transmission toward extraordinary new horizons.',
+      ],
+      quotes: [
+        'Smooth rhythm and steady focus always beat rushing, because consistent accuracy naturally grows into effortless typing velocity.',
+        'Small deliberate daily habits build lasting muscle memory that stays with you through years of creative and technical work.',
+        'Turning clear thoughts into crisp text on screen frees your attention for solving challenging problems and inventing great products.',
+      ],
+    };
 
-    // Длинные тексты (291 - 400 символов)
-    const ruLong = [
-      'Современные технологии развиваются с невероятной скоростью. Умение быстро и грамотно набирать текст вслепую — один из самых ценных и востребованных навыков для любого разработчика. Спокойный ритм, правильная осанка и регулярные тренировки творят настоящие чудеса, превращая рутинный ввод данных в сплошное эстетическое удовольствие.',
-      'Космические исследования вдохновляют человечество на смелые научные открытия. Далекие неизведанные галактики, орбитальные станции и мощнейшие квантовые телескопы помогают лучше понять фундаментальные законы природы. Каждый уверенный шаг вперед требует терпения, глубокой концентрации и постоянного оттачивания своего мастерства день за днем.'
-    ];
+    const pools = isRu ? ruPools : enPools;
+    let bucketKey = 'quotes';
+    if (normTopic.includes('банан') || normTopic.includes('banana')) bucketKey = 'banana';
+    else if (normTopic.includes('it') || normTopic.includes('код') || normTopic.includes('програм') || normTopic.includes('tech')) bucketKey = 'it';
+    else if (normTopic.includes('космос') || normTopic.includes('наук') || normTopic.includes('space') || normTopic.includes('science')) bucketKey = 'space';
+    else if (normTopic.includes('случайн') || normTopic.includes('random')) {
+      const keys = Object.keys(pools);
+      bucketKey = keys[Math.floor(Math.random() * keys.length)];
+    }
 
-    // Короткие тексты на английском (150 - 200 символов)
-    const enShort = [
-      'Bananas are rich in potassium and essential nutrients that boost cognitive function, relieve fatigue, and help maintain focus during intense typing sessions.',
-      'Touch typing allows your fingers to move automatically across the keyboard while your mind stays fully focused on creating clean and elegant software.',
-      'Deep learning models continue to transform how humans interact with technology, opening exciting new frontiers in education, engineering, and modern science.'
-    ];
+    const candidates = [...pools[bucketKey]];
+    const allOther = Object.entries(pools)
+      .filter(([k]) => k !== bucketKey)
+      .flatMap(([, arr]) => arr);
 
-    // Средние тексты на английском (201 - 290 символов)
-    const enMedium = [
-      'Modern web applications rely on responsive user interfaces, real-time reactive stores, and robust database architectures. Writing clean and sustainable code is an art that requires patience, continuous practice, and genuine dedication.',
-      'Great software developers value simplicity and clarity over convoluted cleverness. Write code that your future self and your teammates will easily understand, maintain with confidence, and genuinely enjoy working with.',
-      'Maintaining a smooth, steady rhythm across the keyboard is far more important than raw speed. Accuracy always leads to effortless typing velocity and prevents cognitive fatigue throughout long productive workdays.'
-    ];
+    const pickRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+    let chosen = pickRandom(candidates);
 
-    // Длинные тексты на английском (291 - 400 символов)
-    const enLong = [
-      'Consistency turns small daily habits into extraordinary accomplishments. When you practice touch typing every single day, your fingers develop natural muscle memory that allows you to express your thoughts freely and effortlessly without ever looking down at the keyboard keys or breaking your creative flow.',
-      'The exploration of deep space and planetary systems requires international scientific cooperation, advanced computational algorithms, and relentless curiosity. Every discovery expands human perspective, inspires future generations, and pushes the boundaries of our technological civilization forward.'
-    ];
-
-    const poolRu = length === 'short' ? ruShort : length === 'long' ? ruLong : ruMedium;
-    const poolEn = length === 'short' ? enShort : length === 'long' ? enLong : enMedium;
-    const pool = isRu ? poolRu : poolEn;
-    let chosen = pool[Math.floor(Math.random() * pool.length)];
+    if (length === 'medium' || length === 'long') {
+      const second = pickRandom(candidates.length > 1 ? candidates.filter((c) => c !== chosen) : allOther);
+      chosen = `${chosen} ${second}`;
+    }
+    if (length === 'long') {
+      const third = pickRandom(allOther);
+      chosen = `${chosen} ${third}`;
+    }
 
     if (includeNumbers) {
-      chosen = isRu 
-        ? chosen.replace(/(бананы|технологии|звезд|код|интеллект)/i, '$1 в 2026 году') 
-        : chosen.replace(/(bananas|systems|models|code|software)/i, '$1 in 2026');
+      chosen = isRu
+        ? `${chosen} В 2026 году цель — от 80 до 100 слов в минуту.`
+        : `${chosen} In 2026, aiming for 80 to 100 words per minute feels great.`;
     }
 
     if (!includePunctuation) {

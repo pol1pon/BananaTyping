@@ -10,11 +10,12 @@ import {
   Search, 
   ArrowRight, 
   RefreshCw,
-  User as UserIcon,
-  Keyboard
+  Keyboard,
+  Lock
 } from "lucide-react";
 import { useLeaderboardStore, LeaderboardEntry } from "../stores/leaderboardStore";
 import { useAuthStore } from "../stores/userStore";
+import { UserAvatar } from "../components/UserAvatar";
 
 // Резервный список лидеров для демонстрации, если в базе еще мало записей
 const FALLBACK_LEADERS: LeaderboardEntry[] = [
@@ -41,9 +42,10 @@ export function LeaderboardPage() {
   }, [fetchLeaderboard]);
 
   // Данные лидерборда (из API или резервные)
+  const isFallback = !entries || entries.length === 0;
   const allEntries = useMemo(() => {
-    return entries && entries.length > 0 ? entries : FALLBACK_LEADERS;
-  }, [entries]);
+    return !isFallback ? entries : FALLBACK_LEADERS;
+  }, [entries, isFallback]);
 
   // Обработка данных: фильтрация по периоду, уникальным рекордам и поиску
   const processedEntries = useMemo(() => {
@@ -187,73 +189,94 @@ export function LeaderboardPage() {
       {/* Пьедестал почёта: Топ-3 игрока */}
       {topThree.length >= 3 && !searchQuery && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 items-end">
-          
-          {/* 2 МЕСТО (Серебро) */}
-          <div className="order-2 md:order-1 bg-white rounded-3xl p-5 sm:p-6 border border-gray-200 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-700 font-black text-sm flex items-center justify-center mb-3">
-              2
-            </div>
-            <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-gray-200 to-gray-400 text-white font-black text-xl flex items-center justify-center shadow-md mb-2">
-              {(topThree[1].user?.username || "2").charAt(0).toUpperCase()}
-            </div>
-            <div className="font-extrabold text-gray-900 text-base max-w-full truncate px-2 mb-1">
-              {topThree[1].user?.username || `Игрок #${topThree[1].id}`}
-            </div>
-            <div className="flex items-center gap-1 text-2xl font-black text-gray-900 mb-2">
-              <span>{topThree[1].wpm}</span>
-              <span className="text-xs font-semibold text-gray-400">WPM</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-500 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
-              <Target size={12} className="text-gray-400" />
-              <span>Точность: {topThree[1].accuracy}%</span>
-            </div>
-          </div>
+          {[
+            { entry: topThree[1], rank: 2, orderClass: "order-2 md:order-1", borderClass: "border-gray-200", avatarSize: 58 },
+            { entry: topThree[0], rank: 1, orderClass: "order-1 md:order-2 md:-mt-4", borderClass: "border-2 border-[#FFD700] ring-4 ring-[#FFD700]/20 bg-gradient-to-b from-amber-500/15 via-white to-white shadow-[0_12px_32px_rgba(255,215,0,0.2)]", avatarSize: 68 },
+            { entry: topThree[2], rank: 3, orderClass: "order-3", borderClass: "border-amber-200", avatarSize: 58 },
+          ].map(({ entry, rank, orderClass, borderClass, avatarSize }) => {
+            const name = entry.user?.username || `Игрок #${entry.id}`;
+            const profilePath = !isFallback && entry.user?.id ? `/player/${entry.user.id}` : null;
+            const inner = (
+              <>
+                {rank === 1 && (
+                  <div className="absolute top-3 right-3 text-xs font-bold bg-[#FFD700] text-gray-900 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Crown size={12} className="fill-current" />
+                    <span>Чемпион</span>
+                  </div>
+                )}
 
-          {/* 1 МЕСТО (Золото) */}
-          <div className="order-1 md:order-2 bg-gradient-to-b from-amber-500/15 via-white to-white rounded-3xl p-6 sm:p-7 border-2 border-[#FFD700] ring-4 ring-[#FFD700]/20 shadow-[0_12px_32px_rgba(255,215,0,0.2)] flex flex-col items-center text-center relative overflow-hidden md:-mt-4">
-            <div className="absolute top-3 right-3 text-xs font-bold bg-[#FFD700] text-gray-900 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <Crown size={12} className="fill-current" />
-              <span>Чемпион</span>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-[#FFD700] text-gray-950 font-black text-base flex items-center justify-center mb-2 shadow-sm">
-              <Crown size={20} className="fill-current text-gray-900" />
-            </div>
-            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-yellow-400 via-amber-500 to-yellow-300 text-gray-950 font-black text-2xl flex items-center justify-center shadow-md mb-2 ring-4 ring-white">
-              {(topThree[0].user?.username || "1").charAt(0).toUpperCase()}
-            </div>
-            <div className="font-black text-gray-900 text-lg max-w-full truncate px-2 mb-1">
-              {topThree[0].user?.username || `Игрок #${topThree[0].id}`}
-            </div>
-            <div className="flex items-center gap-1.5 text-3xl font-black text-[#D97706] mb-2">
-              <span>{topThree[0].wpm}</span>
-              <span className="text-sm font-bold text-gray-500">WPM</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-700 bg-amber-50 px-3.5 py-1 rounded-full border border-amber-200">
-              <Target size={12} className="text-[#D97706]" />
-              <span>Точность: {topThree[0].accuracy}%</span>
-            </div>
-          </div>
+                <div
+                  className={`rounded-full font-black flex items-center justify-center mb-3 ${
+                    rank === 1
+                      ? "w-10 h-10 bg-[#FFD700] text-gray-950 text-base shadow-sm"
+                      : rank === 2
+                      ? "w-8 h-8 bg-gray-100 text-gray-700 text-sm"
+                      : "w-8 h-8 bg-amber-100 text-amber-800 text-sm"
+                  }`}
+                >
+                  {rank === 1 ? <Crown size={20} className="fill-current text-gray-900" /> : rank}
+                </div>
 
-          {/* 3 МЕСТО (Бронза) */}
-          <div className="order-3 bg-white rounded-3xl p-5 sm:p-6 border border-amber-200 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-black text-sm flex items-center justify-center mb-3">
-              3
-            </div>
-            <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-600 to-amber-700 text-white font-black text-xl flex items-center justify-center shadow-md mb-2">
-              {(topThree[2].user?.username || "3").charAt(0).toUpperCase()}
-            </div>
-            <div className="font-extrabold text-gray-900 text-base max-w-full truncate px-2 mb-1">
-              {topThree[2].user?.username || `Игрок #${topThree[2].id}`}
-            </div>
-            <div className="flex items-center gap-1 text-2xl font-black text-gray-900 mb-2">
-              <span>{topThree[2].wpm}</span>
-              <span className="text-xs font-semibold text-gray-400">WPM</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-500 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
-              <Target size={12} className="text-gray-400" />
-              <span>Точность: {topThree[2].accuracy}%</span>
-            </div>
-          </div>
+                <div className="mb-2.5">
+                  <UserAvatar
+                    avatar={entry.user?.avatar}
+                    username={name}
+                    size={avatarSize}
+                    isAdmin={entry.user?.role === "admin"}
+                    showAdminBadge={true}
+                    className={rank === 1 ? "ring-4 ring-[#FFD700]/50 shadow-md" : "shadow-md"}
+                  />
+                </div>
+
+                <div className="font-extrabold text-gray-900 text-base sm:text-lg max-w-full truncate px-2 mb-1 flex items-center justify-center gap-1.5 group-hover/podium:text-[#D97706] transition-colors">
+                  <span className="truncate">{name}</span>
+                  {entry.user?.isPrivate && (
+                    <span title="Приватный профиль" className="text-gray-400 shrink-0">
+                      <Lock size={13} />
+                    </span>
+                  )}
+                </div>
+
+                <div
+                  className={`flex items-center gap-1 font-black mb-2 ${
+                    rank === 1 ? "text-3xl text-[#D97706]" : "text-2xl text-gray-900"
+                  }`}
+                >
+                  <span>{entry.wpm}</span>
+                  <span className="text-xs sm:text-sm font-semibold text-gray-400">WPM</span>
+                </div>
+
+                <div
+                  className={`flex items-center gap-2 text-xs font-bold px-3 py-1 rounded-full border ${
+                    rank === 1
+                      ? "text-gray-700 bg-amber-50 border-amber-200"
+                      : "text-gray-500 bg-gray-50 border-gray-100"
+                  }`}
+                >
+                  <Target size={12} className={rank === 1 ? "text-[#D97706]" : "text-gray-400"} />
+                  <span>Точность: {entry.accuracy}%</span>
+                </div>
+              </>
+            );
+
+            return profilePath ? (
+              <Link
+                key={rank}
+                to={profilePath}
+                className={`group/podium ${orderClass} bg-white rounded-3xl p-5 sm:p-6 border ${borderClass} shadow-sm flex flex-col items-center text-center relative overflow-hidden hover:shadow-lg transition-all hover:-translate-y-0.5`}
+                title={`Открыть профиль ${name}`}
+              >
+                {inner}
+              </Link>
+            ) : (
+              <div
+                key={rank}
+                className={`${orderClass} bg-white rounded-3xl p-5 sm:p-6 border ${borderClass} shadow-sm flex flex-col items-center text-center relative overflow-hidden`}
+              >
+                {inner}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -395,29 +418,55 @@ export function LeaderboardPage() {
 
                       {/* Пользователь */}
                       <td className="py-3.5 sm:py-4 px-3 sm:px-6">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs ${
-                            rank === 1
-                              ? "bg-gradient-to-tr from-yellow-400 to-amber-500 text-gray-900"
-                              : rank === 2
-                              ? "bg-gradient-to-tr from-gray-300 to-gray-500"
-                              : rank === 3
-                              ? "bg-gradient-to-tr from-amber-600 to-amber-700"
-                              : "bg-gradient-to-tr from-gray-400 to-gray-600"
-                          }`}>
-                            {username.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                            <span className={`font-bold truncate max-w-[100px] sm:max-w-none ${isCurrent ? "text-[#D97706]" : "text-gray-900"}`}>
-                              {username}
-                            </span>
-                            {isCurrent && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-[#FFD700] text-gray-950 uppercase shrink-0">
-                                Ты
+                        {!isFallback && entry.user?.id ? (
+                          <Link
+                            to={`/player/${entry.user.id}`}
+                            className="group/row flex items-center gap-2 sm:gap-3 w-fit"
+                            title={`Открыть профиль ${username}`}
+                          >
+                            <UserAvatar
+                              avatar={entry.user?.avatar}
+                              username={username}
+                              size={34}
+                              isAdmin={entry.user?.role === "admin"}
+                              showAdminBadge={true}
+                            />
+                            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                              <span
+                                className={`font-bold truncate max-w-[110px] sm:max-w-[200px] group-hover/row:underline ${
+                                  isCurrent ? "text-[#D97706]" : "text-gray-900 group-hover/row:text-[#D97706]"
+                                }`}
+                              >
+                                {username}
                               </span>
-                            )}
+                              {entry.user?.isPrivate && (
+                                <span title="Приватный профиль" className="text-gray-400 shrink-0">
+                                  <Lock size={12} />
+                                </span>
+                              )}
+                              {isCurrent && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-[#FFD700] text-gray-950 uppercase shrink-0">
+                                  Ты
+                                </span>
+                              )}
+                            </div>
+                          </Link>
+                        ) : (
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <UserAvatar
+                              avatar={entry.user?.avatar}
+                              username={username}
+                              size={34}
+                              isAdmin={entry.user?.role === "admin"}
+                              showAdminBadge={false}
+                            />
+                            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                              <span className={`font-bold truncate max-w-[110px] sm:max-w-none ${isCurrent ? "text-[#D97706]" : "text-gray-900"}`}>
+                                {username}
+                              </span>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </td>
 
                       {/* Скорость WPM */}

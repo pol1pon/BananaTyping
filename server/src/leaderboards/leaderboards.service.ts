@@ -17,7 +17,7 @@ export class LeaderboardsService {
     return this.leaderboardRepository.save(leaderboard);
   }
 
-  findAll(period?: string): Promise<LeaderBoard[]> {
+  async findAll(period?: string): Promise<LeaderBoard[]> {
     const query = this.leaderboardRepository.createQueryBuilder('leaderboard')
       .leftJoinAndSelect('leaderboard.user', 'user')
       .orderBy('leaderboard.wpm', 'DESC');
@@ -27,7 +27,19 @@ export class LeaderboardsService {
       query.where('leaderboard.createdAt >= :oneDayAgo', { oneDayAgo });
     }
 
-    return query.getMany();
+    const entries = await query.getMany();
+    return entries.map((entry) => {
+      if (entry.user) {
+        entry.user = {
+          id: entry.user.id,
+          username: entry.user.username,
+          avatar: entry.user.avatar,
+          role: entry.user.role,
+          isPrivate: Boolean(entry.user.isPrivate),
+        } as any;
+      }
+      return entry;
+    });
   }
 
   findOne(id: number): Promise<LeaderBoard | null> {

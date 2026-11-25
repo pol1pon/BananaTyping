@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo } from "react";
-import { Crown, Trophy, ArrowRight, Clock, RefreshCw } from "lucide-react";
+import { Crown, Trophy, ArrowRight, Clock, RefreshCw, Lock } from "lucide-react";
 import { Link } from "react-router";
 import { useLeaderboardStore, LeaderboardEntry } from "../stores/leaderboardStore";
+import { UserAvatar } from "./UserAvatar";
 
 export function LeaderboardWidget() {
   const { entries, fetchLeaderboard } = useLeaderboardStore();
@@ -47,7 +48,11 @@ export function LeaderboardWidget() {
       .slice(0, 3)
       .map((item, idx) => ({
         rank: idx + 1,
+        userId: item.user?.id,
         name: item.user?.username || `Игрок #${item.id}`,
+        avatar: item.user?.avatar,
+        role: item.user?.role,
+        isPrivate: item.user?.isPrivate,
         wpm: item.wpm,
       }));
   }, [entries]);
@@ -89,53 +94,73 @@ export function LeaderboardWidget() {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {topDailyLeaders.map((leader) => (
-              <div
-                key={leader.rank}
-                className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                {/* Номер ранга */}
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                    leader.rank === 1
-                      ? "bg-[#FFD700] text-black shadow-xs"
-                      : leader.rank === 2
-                      ? "bg-gray-200 text-gray-700"
-                      : "bg-amber-100 text-amber-800"
-                  }`}
-                >
-                  {leader.rank === 1 ? (
-                    <Crown size={13} className="text-black" />
-                  ) : (
-                    leader.rank
-                  )}
-                </div>
-
-                {/* Аватарка с инициалом */}
-                <div className={`w-7 h-7 rounded-full text-white font-bold text-xs flex items-center justify-center shadow-xs shrink-0 ${
-                  leader.rank === 1
-                    ? "bg-gradient-to-tr from-yellow-400 to-amber-500 text-gray-950 font-black"
-                    : leader.rank === 2
-                    ? "bg-gradient-to-tr from-gray-300 to-gray-500"
-                    : "bg-gradient-to-tr from-amber-600 to-amber-700"
-                }`}>
-                  {leader.name.charAt(0).toUpperCase()}
-                </div>
-
-                {/* Имя пользователя (только уникальные) */}
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs sm:text-sm font-bold text-gray-900 truncate">
-                    {leader.name}
+            {topDailyLeaders.map((leader) => {
+              const rowContent = (
+                <>
+                  {/* Номер ранга */}
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                      leader.rank === 1
+                        ? "bg-[#FFD700] text-black shadow-xs"
+                        : leader.rank === 2
+                        ? "bg-gray-200 text-gray-700"
+                        : "bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    {leader.rank === 1 ? (
+                      <Crown size={13} className="text-black" />
+                    ) : (
+                      leader.rank
+                    )}
                   </div>
-                </div>
 
-                {/* Скорость WPM */}
-                <div className="text-xs sm:text-sm font-bold text-gray-900 shrink-0">
-                  {leader.wpm}{" "}
-                  <span className="text-[10px] font-normal text-gray-500">WPM</span>
+                  {/* Аватарка пользователя */}
+                  <UserAvatar
+                    avatar={leader.avatar}
+                    username={leader.name}
+                    size={28}
+                    isAdmin={leader.role === "admin"}
+                    showAdminBadge={false}
+                  />
+
+                  {/* Имя пользователя */}
+                  <div className="flex-1 min-w-0 flex items-center gap-1">
+                    <span className="text-xs sm:text-sm font-bold text-gray-900 group-hover/leader:text-[#D97706] transition-colors truncate">
+                      {leader.name}
+                    </span>
+                    {leader.isPrivate && (
+                      <span title="Приватный профиль" className="text-gray-400 shrink-0">
+                        <Lock size={11} />
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Скорость WPM */}
+                  <div className="text-xs sm:text-sm font-bold text-gray-900 shrink-0">
+                    {leader.wpm}{" "}
+                    <span className="text-[10px] font-normal text-gray-500">WPM</span>
+                  </div>
+                </>
+              );
+
+              return leader.userId ? (
+                <Link
+                  key={leader.rank}
+                  to={`/player/${leader.userId}`}
+                  className="group/leader flex items-center gap-2.5 p-1 rounded-xl hover:bg-amber-50/60 transition-colors"
+                  title={`Перейти в профиль ${leader.name}`}
+                >
+                  {rowContent}
+                </Link>
+              ) : (
+                <div
+                  key={leader.rank}
+                  className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  {rowContent}
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Если за 24ч набралось меньше 3 человек, отображаем интерактивное свободное место */}
             {topDailyLeaders.length < 3 && (

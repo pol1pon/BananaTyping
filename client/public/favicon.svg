@@ -1,42 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 48" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <defs>
-    <!-- Крылья -->
-    <linearGradient id="fav-w-left" x1="26" y1="18" x2="4" y2="8" gradientUnits="userSpaceOnUse">
+    <linearGradient id="fav-bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1E1E22" />
+      <stop offset="100%" stop-color="#0D0D10" />
+    </linearGradient>
+    <linearGradient id="fav-w-left" x1="32" y1="24" x2="8" y2="14" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#E4E4E7" />
-      <stop offset="35%" stop-color="#FFFFFF" />
+      <stop offset="40%" stop-color="#FFFFFF" />
       <stop offset="100%" stop-color="#F4F4F5" />
     </linearGradient>
-    <linearGradient id="fav-w-right" x1="26" y1="18" x2="48" y2="8" gradientUnits="userSpaceOnUse">
+    <linearGradient id="fav-w-right" x1="32" y1="24" x2="56" y2="14" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#E4E4E7" />
-      <stop offset="35%" stop-color="#FFFFFF" />
+      <stop offset="40%" stop-color="#FFFFFF" />
       <stop offset="100%" stop-color="#F4F4F5" />
     </linearGradient>
-
-    <!-- Банан -->
-    <linearGradient id="fav-b-top" x1="16" y1="8" x2="38" y2="40" gradientUnits="userSpaceOnUse">
+    <linearGradient id="fav-b-top" x1="22" y1="14" x2="44" y2="48" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#FFF385" />
       <stop offset="45%" stop-color="#FFD700" />
       <stop offset="100%" stop-color="#F59E0B" />
     </linearGradient>
-    <linearGradient id="fav-b-bot" x1="12" y1="22" x2="36" y2="44" gradientUnits="userSpaceOnUse">
+    <linearGradient id="fav-b-bot" x1="18" y1="28" x2="42" y2="52" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#F59E0B" />
       <stop offset="60%" stop-color="#D97706" />
       <stop offset="100%" stop-color="#B45309" />
     </linearGradient>
-    <linearGradient id="fav-b-stem" x1="28" y1="4" x2="31" y2="10" gradientUnits="userSpaceOnUse">
+    <linearGradient id="fav-b-stem" x1="34" y1="10" x2="37" y2="16" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#4ADE80" />
       <stop offset="60%" stop-color="#16A34A" />
       <stop offset="100%" stop-color="#14532D" />
     </linearGradient>
-
-    <!-- Тень -->
-    <filter id="fav-shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.3" />
-    </filter>
   </defs>
 
-  <g filter="url(#fav-shadow)">
-    <!-- Левое крыло -->
+  <!-- Тёмный фон бейджа, чтобы крылья и банан чётко читались на любой вкладке браузера -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#fav-bg)" stroke="#FFD700" stroke-opacity="0.35" stroke-width="2" />
+
+  <g transform="translate(6, 8)">
+    <!-- Левое ангельское крыло -->
     <path
       d="M 28 19
          C 22 15 12 11 4 8
@@ -47,10 +46,12 @@
       fill="url(#fav-w-left)"
       stroke="#D4D4D8"
       stroke-width="0.9"
+      stroke-linejoin="round"
     />
     <path d="M 8 13 C 13 15 19 18 25 19.5" stroke="#E4E4E7" stroke-width="0.8" stroke-linecap="round" />
+    <path d="M 11.5 19 C 16 20.5 21 21.5 25 22" stroke="#E4E4E7" stroke-width="0.8" stroke-linecap="round" />
 
-    <!-- Правое крыло -->
+    <!-- Правое ангельское крыло -->
     <path
       d="M 30 19
          C 36 15 44 11 48 8
@@ -61,24 +62,28 @@
       fill="url(#fav-w-right)"
       stroke="#D4D4D8"
       stroke-width="0.9"
+      stroke-linejoin="round"
     />
     <path d="M 44 13 C 39 15 33 18 27 19.5" stroke="#E4E4E7" stroke-width="0.8" stroke-linecap="round" />
+    <path d="M 40.5 19 C 36 20.5 31 21.5 27 22" stroke="#E4E4E7" stroke-width="0.8" stroke-linecap="round" />
 
     <!-- Банан -->
     <path
-      d="M 28 7.5 C 35 13 41 21 41 30 C 41 39 33 45 20 45 C 12 45 7.5 41.5 8 38 C 8.5 35 13 35 18 33.5 C 27 31 32 22 30 14.5 Z"
+      d="M 28 7.5 C 35 13 41 21 41 30 C 41 39 33 45 20 45 C 12 45 7.5 41.5 8 38 C 8.5 35 13 35 18 33.5 C 27 31 32 22 30 14.5 C 29.5 12 28.5 9.5 28 7.5 Z"
       fill="url(#fav-b-bot)"
       stroke="#92400E"
       stroke-width="1.2"
+      stroke-linejoin="round"
     />
     <path
-      d="M 28 7.5 C 33 11.5 37.5 18 37.5 26.5 C 37.5 35 30 40 19 40.5 C 13 40.8 9 38.5 8 38 C 8.5 35 13 35 18 33.5 C 27 31 32 22 30 14.5 Z"
+      d="M 28 7.5 C 33 11.5 37.5 18 37.5 26.5 C 37.5 35 30 40 19 40.5 C 13 40.8 9 38.5 8 38 C 8.5 35 13 35 18 33.5 C 27 31 32 22 30 14.5 C 29.5 12 28.5 9.5 28 7.5 Z"
       fill="url(#fav-b-top)"
       stroke="#B45309"
       stroke-width="1.2"
+      stroke-linejoin="round"
     />
-    <path d="M 30 11 C 35 16 38.5 22.5 38.5 29.5 C 38.5 34.5 35 38.5 27 41" stroke="#FFFFFF" stroke-width="1.2" opacity="0.65" />
-    <path d="M 28 7.5 L 29 4.2 L 31 4 L 29.5 8" fill="url(#fav-b-stem)" stroke="#15803D" stroke-width="0.8" />
-    <path d="M 8 38 L 7.2 41 L 10 41 Z" fill="#78350F" />
+    <path d="M 30 11 C 35 16 38.5 22.5 38.5 29.5 C 38.5 34.5 35 38.5 27 41" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" opacity="0.65" />
+    <path d="M 28 7.5 L 29 4.2 C 29.3 3.4 30.5 3.4 31 4 C 31.6 4.8 31.8 6 31 7.2 L 29.5 8" fill="url(#fav-b-stem)" stroke="#15803D" stroke-width="0.9" stroke-linejoin="round" />
+    <path d="M 8 38 C 7 38.8 6.5 40 7.2 41 C 7.8 41.8 9 41.8 10 41 L 8 38 Z" fill="#78350F" />
   </g>
 </svg>

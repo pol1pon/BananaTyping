@@ -8,6 +8,7 @@ import { Register } from "./pages/Register";
 import { Profile } from "./pages/Profile";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminClaimPage } from "./pages/AdminClaimPage";
+import { PublicProfilePage } from "./pages/PublicProfilePage";
 
 export const router = createBrowserRouter([
   {
@@ -30,6 +31,10 @@ export const router = createBrowserRouter([
   {
     path: "/profile",
     Component: Profile,
+  },
+  {
+    path: "/player/:id",
+    Component: PublicProfilePage,
   },
   {
     path: "/admin",

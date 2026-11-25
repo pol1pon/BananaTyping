@@ -45,6 +45,7 @@ export class AuthController {
         avatar: user.avatar,
         bio: user.bio,
         role: user.role || 'user',
+        isPrivate: Boolean(user.isPrivate),
       },
       ...token,
     };
@@ -79,6 +80,7 @@ export class AuthController {
         avatar: user.avatar,
         bio: user.bio,
         role: user.role || 'user',
+        isPrivate: Boolean(user.isPrivate),
       },
       ...token,
     };

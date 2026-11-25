@@ -68,6 +68,9 @@ export class UsersService {
     if (updateUserDto.role !== undefined) {
       updateData.role = updateUserDto.role;
     }
+    if (updateUserDto.isPrivate !== undefined) {
+      updateData.isPrivate = Boolean(updateUserDto.isPrivate);
+    }
     if (updateUserDto.password && updateUserDto.password.trim() !== '') {
       updateData.password = await bcrypt.hash(updateUserDto.password, 10);
     }
@@ -134,6 +137,33 @@ export class UsersService {
       totalUsers,
       totalAdmins,
       adminSecretKey,
+    };
+  }
+
+  async findPublicProfile(id: number) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`Пользователь с ID ${id} не найден`);
+    }
+
+    const isPrivate = Boolean(user.isPrivate);
+    const results =
+      !isPrivate && this.userRepository.manager
+        ? await this.userRepository.manager.find(LeaderBoard, {
+            where: { userId: id },
+            order: { createdAt: 'ASC', id: 'ASC' },
+          })
+        : [];
+
+    return {
+      id: user.id,
+      username: user.username,
+      avatar: user.avatar,
+      role: user.role || 'user',
+      isPrivate,
+      createdAt: user.createdAt,
+      bio: isPrivate ? null : user.bio || null,
+      results,
     };
   }
 

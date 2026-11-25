@@ -166,4 +166,28 @@ describe('UsersService', () => {
       adminSecretKey: 'test_secret_2026',
     });
   });
+
+  it('findPublicProfile: скрывает bio и results при isPrivate=true и не возвращает email/password', async () => {
+    mockRepo.findOne.mockResolvedValueOnce({
+      id: 4,
+      username: 'hidden_player',
+      email: 'secret@mail.com',
+      password: 'hash',
+      avatar: 'banana-ninja',
+      bio: 'Секретное описание',
+      role: 'user',
+      isPrivate: true,
+      createdAt: new Date('2026-01-01'),
+    } as User);
+
+    const privProfile = await service.findPublicProfile(4);
+    expect(privProfile.isPrivate).toBe(true);
+    expect(privProfile.bio).toBeNull();
+    expect(privProfile.results).toEqual([]);
+    expect((privProfile as any).email).toBeUndefined();
+    expect((privProfile as any).password).toBeUndefined();
+
+    mockRepo.findOne.mockResolvedValueOnce(null);
+    await expect(service.findPublicProfile(999)).rejects.toThrow(NotFoundException);
+  });
 });

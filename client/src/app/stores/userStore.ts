@@ -25,6 +25,7 @@ export interface User {
   avatar?: string;
   bio?: string;
   role?: 'user' | 'admin' | string;
+  isPrivate?: boolean;
   createdAt?: string;
 }
 
@@ -56,6 +57,7 @@ export interface UpdateProfilePayload {
   avatar?: string;
   bio?: string;
   password?: string;
+  isPrivate?: boolean;
 }
 
 interface AuthState {

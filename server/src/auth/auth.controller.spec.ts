@@ -55,6 +55,7 @@ describe('AuthController', () => {
       avatar: undefined,
       bio: undefined,
       role: 'user',
+      isPrivate: false,
     });
 
     const createArg = mockUsersService.create.mock.calls[0][0];
@@ -95,6 +96,7 @@ describe('AuthController', () => {
       avatar: 'banana-angel',
       bio: '120 WPM',
       role: 'admin',
+      isPrivate: false,
     });
   });
 

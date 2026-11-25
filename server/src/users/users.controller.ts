@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, Query, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -67,6 +67,15 @@ export class UsersController {
   @ApiOperation({ summary: 'Статистика пользователей для админ-панели' })
   getAdminStats() {
     return this.usersService.getAdminStats();
+  }
+
+  @Get('public/:id')
+  @ApiOperation({ summary: 'Получение публичного профиля игрока с учётом настроек приватности' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Публичный профиль пользователя' })
+  @ApiResponse({ status: 404, description: 'Пользователь не найден' })
+  findPublicProfile(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.findPublicProfile(id);
   }
 
   @Get(':id')

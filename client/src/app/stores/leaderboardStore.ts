@@ -15,6 +15,9 @@ export interface LeaderboardEntry {
   user?: {
     id: number;
     username: string;
+    avatar?: string;
+    role?: string;
+    isPrivate?: boolean;
   };
 }
 

@@ -207,13 +207,49 @@ describe('BananaTyping Full HTTP E2E Suite', () => {
       expect(res.body[1].wpm).toBe(95);
     });
 
-    it('GET /leaderboards?period=daily — сортирует по убыванию WPM', async () => {
+    it('GET /leaderboards?period=daily — сортирует по убыванию WPM и возвращает безопасный user с avatar', async () => {
       const res = await request(app.getHttpServer())
         .get('/leaderboards?period=daily')
         .expect(200);
 
       expect(res.body.length).toBeGreaterThanOrEqual(2);
       expect(res.body[0].wpm).toBeGreaterThanOrEqual(res.body[1].wpm);
+      expect(res.body[0].user.avatar).toBe('banana-angel');
+      expect(res.body[0].user.email).toBeUndefined();
+      expect(res.body[0].user.password).toBeUndefined();
+    });
+
+    it('GET /users/public/:id — возвращает открытый профиль и скрывает статистику после включения приватности', async () => {
+      // 1. Открытый профиль
+      const publicRes = await request(app.getHttpServer())
+        .get(`/users/public/${userId}`)
+        .expect(200);
+
+      expect(publicRes.body.isPrivate).toBe(false);
+      expect(publicRes.body.bio).toBe('Печатаю со скоростью 110 WPM');
+      expect(publicRes.body.results).toHaveLength(2);
+      expect(publicRes.body.email).toBeUndefined();
+      expect(publicRes.body.password).toBeUndefined();
+
+      // 2. Включаем приватность
+      const toggleRes = await request(app.getHttpServer())
+        .put(`/users/${userId}`)
+        .send({ isPrivate: true })
+        .expect(200);
+      expect(toggleRes.body.isPrivate).toBe(true);
+
+      // 3. Повторный запрос публичного профиля — bio и results скрыты
+      const privateRes = await request(app.getHttpServer())
+        .get(`/users/public/${userId}`)
+        .expect(200);
+
+      expect(privateRes.body.isPrivate).toBe(true);
+      expect(privateRes.body.bio).toBeNull();
+      expect(privateRes.body.results).toEqual([]);
+      expect(privateRes.body.avatar).toBe('banana-angel');
+
+      // 4. Несуществующий профиль -> 404
+      await request(app.getHttpServer()).get('/users/public/999999').expect(404);
     });
   });
 

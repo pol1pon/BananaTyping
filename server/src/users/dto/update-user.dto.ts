@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from 'class-validator';
 
 export class UpdateUserDto {
   @ApiPropertyOptional({ example: 'john_doe_updated', description: 'Username' })
@@ -37,4 +37,9 @@ export class UpdateUserDto {
   @IsString()
   @IsIn(['user', 'admin'])
   role?: string;
+
+  @ApiPropertyOptional({ example: false, description: 'Hide profile stats and bio from other players' })
+  @IsOptional()
+  @IsBoolean()
+  isPrivate?: boolean;
 }

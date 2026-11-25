@@ -45,6 +45,20 @@ const getRandomFallbackText = (lang: 'ru' | 'en') => {
   return pool[Math.floor(Math.random() * pool.length)];
 };
 
+const prefetchCache = new Map<string, Text[]>();
+const inflightPrefetch = new Set<string>();
+
+function buildPrefetchKey(params: GenerateTextDto): string {
+  return [
+    params.language || 'ru',
+    (params.topic || '').trim().toLowerCase(),
+    params.length || 'medium',
+    params.difficulty || 'medium',
+    Boolean(params.includeNumbers),
+    params.includePunctuation ?? true,
+  ].join('|');
+}
+
 interface TextState {
   currentText: string;
   currentTextId: number | null;
@@ -58,6 +72,7 @@ interface TextState {
 
   fetchRandomText: (lang: 'ru' | 'en', excludeId?: number) => Promise<string>;
   generateAiText: (params: GenerateTextDto) => Promise<string>;
+  prefetchAiText: (params: GenerateTextDto) => Promise<void>;
   fetchHistory: (lang?: 'ru' | 'en') => Promise<void>;
   selectTextFromHistory: (text: Text) => void;
   clearError: () => void;
@@ -119,8 +134,63 @@ export const useTextStore = create<TextState>((set, get) => ({
     }
   },
 
+  prefetchAiText: async (params: GenerateTextDto) => {
+    const key = buildPrefetchKey(params);
+    const existing = prefetchCache.get(key) || [];
+    if (existing.length >= 2 || inflightPrefetch.has(key)) {
+      return;
+    }
+
+    inflightPrefetch.add(key);
+    try {
+      const response = await textsControllerGenerate({
+        client,
+        body: params,
+      });
+
+      if (!response.error && response.data) {
+        const textData = response.data as Text;
+        if (textData?.content || textData?.word) {
+          const updated = prefetchCache.get(key) || [];
+          if (updated.length < 2) {
+            updated.push(textData);
+            prefetchCache.set(key, updated);
+          }
+        }
+      }
+    } catch {
+      // Тихо игнорируем фоновый префетч
+    } finally {
+      inflightPrefetch.delete(key);
+    }
+  },
+
   generateAiText: async (params: GenerateTextDto) => {
     const lang = params.language || 'ru';
+    const key = buildPrefetchKey(params);
+    const cachedQueue = prefetchCache.get(key);
+
+    // Мгновенная выдача (0 мс), если текст уже предзагружен в фоне
+    if (cachedQueue && cachedQueue.length > 0) {
+      const textData = cachedQueue.shift()!;
+      const textContent = (textData?.content || textData?.word || getRandomFallbackText(lang)).trim();
+
+      set((state) => ({
+        currentText: textContent,
+        currentTextId: textData?.id ? Number(textData.id) : null,
+        currentTopic: textData?.topic ? String(textData.topic) : params.topic || null,
+        currentDifficulty: textData?.difficulty ? String(textData.difficulty) : params.difficulty || null,
+        currentSource: textData?.source ? String(textData.source) : 'ai',
+        history: textData?.id ? [textData, ...state.history.filter((h) => h.id !== textData.id)] : state.history,
+        isGenerating: false,
+        error: null,
+      }));
+
+      // Сразу догружаем следующий текст в фон
+      void get().prefetchAiText(params);
+      return textContent;
+    }
+
     set({ isGenerating: true, error: null });
     try {
       const response = await textsControllerGenerate({
@@ -145,6 +215,8 @@ export const useTextStore = create<TextState>((set, get) => ({
         isGenerating: false,
       }));
 
+      // Прогреваем следующий текст в фоне для мгновенного повторного нажатия
+      void get().prefetchAiText(params);
       return textContent;
     } catch (err: any) {
       console.warn('Ошибка при генерации текста через ИИ, используем резервный пул текстов:', err);

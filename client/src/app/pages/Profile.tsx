@@ -25,6 +25,8 @@ import {
   Flame,
   Camera,
   Calendar,
+  Lock,
+  Globe,
 } from "lucide-react";
 import { UserAvatar, AVATAR_PRESETS } from "../components/UserAvatar";
 import { BananaLogo } from "../components/BananaLogo";
@@ -76,6 +78,8 @@ export function Profile() {
   const [adminClaimMsg, setAdminClaimMsg] = useState<{ text: string; success: boolean } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isUpdatingPrivacy, setIsUpdatingPrivacy] = useState(false);
+  const [privacyMsg, setPrivacyMsg] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -194,6 +198,25 @@ export function Profile() {
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
+  const handleTogglePrivacy = async () => {
+    setIsUpdatingPrivacy(true);
+    setPrivacyMsg(null);
+    const nextValue = !Boolean(currentUser.isPrivate);
+    try {
+      await updateProfile({ isPrivate: nextValue });
+      setPrivacyMsg(
+        nextValue
+          ? "Профиль теперь приватный — другие игроки не увидят вашу статистику"
+          : "Профиль открыт — другие игроки могут просматривать вашу статистику"
+      );
+      setTimeout(() => setPrivacyMsg(null), 4000);
+    } catch (err: any) {
+      setPrivacyMsg(err?.message || "Не удалось обновить приватность");
+    } finally {
+      setIsUpdatingPrivacy(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0F0F12] text-white relative overflow-hidden">
       {/* Фоновое свечение */}
@@ -297,6 +320,19 @@ export function Profile() {
                   <span className="bg-white/10 text-amber-300 border border-white/10 text-xs font-bold px-2.5 py-0.5 rounded-full">
                     {stats.rank.emoji} {stats.rank.title}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("settings")}
+                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border inline-flex items-center gap-1 transition-colors ${
+                      currentUser.isPrivate
+                        ? "bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25"
+                        : "bg-emerald-500/10 text-emerald-300 border-emerald-500/25 hover:bg-emerald-500/20"
+                    }`}
+                    title="Изменить настройки приватности"
+                  >
+                    {currentUser.isPrivate ? <Lock size={11} /> : <Globe size={11} />}
+                    <span>{currentUser.isPrivate ? "Приватный" : "Публичный"}</span>
+                  </button>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-xs text-gray-400 mb-3">
@@ -762,8 +798,69 @@ export function Profile() {
               </form>
             </div>
 
-            {/* Боковая карточка: Секретный доступ администратора */}
-            <div className="bg-[#18181B] rounded-3xl p-6 border border-white/10 shadow-xl">
+            {/* Боковая колонка: Приватность + Секретный доступ администратора */}
+            <div className="flex flex-col gap-6">
+              {/* Карточка приватности профиля */}
+              <div className="bg-[#18181B] rounded-3xl p-6 border border-white/10 shadow-xl">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    {currentUser.isPrivate ? (
+                      <Lock size={18} className="text-[#FFD700]" />
+                    ) : (
+                      <Globe size={18} className="text-emerald-400" />
+                    )}
+                    <h3 className="font-bold text-base text-white">Приватность профиля</h3>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={Boolean(currentUser.isPrivate)}
+                    disabled={isUpdatingPrivacy}
+                    onClick={handleTogglePrivacy}
+                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
+                      currentUser.isPrivate ? "bg-[#FFD700]" : "bg-white/15"
+                    }`}
+                    aria-label="Переключить приватность профиля"
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-[#111111] shadow-md transition duration-200 ease-in-out ${
+                        currentUser.isPrivate ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <p className="text-xs text-gray-400 leading-relaxed mb-3">
+                  {currentUser.isPrivate
+                    ? "Сейчас ваш профиль скрыт. При переходе по вашему нику или аватарке из топа игроков статистика, история заездов и описание будут недоступны другим пользователям."
+                    : "Сейчас ваш профиль открыт. Игроки из таблицы лидеров могут нажать на вашу аватарку или имя и посмотреть вашу статистику и достижения."}
+                </p>
+
+                <div className="flex items-center justify-between text-[11px] bg-[#111111] px-3 py-2 rounded-xl border border-white/5">
+                  <span className="text-gray-400">Статус:</span>
+                  <span
+                    className={`font-bold ${
+                      currentUser.isPrivate ? "text-[#FFD700]" : "text-emerald-400"
+                    }`}
+                  >
+                    {isUpdatingPrivacy
+                      ? "Сохранение..."
+                      : currentUser.isPrivate
+                      ? "Приватный профиль 🔒"
+                      : "Публичный профиль 🌐"}
+                  </span>
+                </div>
+
+                {privacyMsg && (
+                  <p className="mt-2.5 text-[11px] text-[#FFD700] leading-snug">
+                    {privacyMsg}
+                  </p>
+                )}
+              </div>
+
+              {/* Карточка: Секретный доступ администратора */}
+              <div className="bg-[#18181B] rounded-3xl p-6 border border-white/10 shadow-xl">
               <div className="flex items-center gap-2 mb-3">
                 <Key size={18} className="text-[#FFD700]" />
                 <h3 className="font-bold text-base text-white">
@@ -848,6 +945,7 @@ export function Profile() {
                   )}
                 </form>
               )}
+              </div>
             </div>
           </section>
         )}
