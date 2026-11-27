@@ -23,6 +23,7 @@ import { UserAvatar } from "../components/UserAvatar";
 import { BananaLogo } from "../components/BananaLogo";
 import { ProfileStatsSection } from "../components/profile/ProfileStatsSection";
 import { calculateAdvancedStats } from "../utils/typingStats";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 interface PublicProfileData {
   id: number;
@@ -49,6 +50,15 @@ export function PublicProfilePage() {
   const [profile, setProfile] = useState<PublicProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  usePageMeta({
+    title: profile?.username
+      ? `${profile.username} — Профиль игрока | BananaTyping`
+      : "Профиль игрока — BananaTyping",
+    description: profile?.bio || "Статистика и достижения игрока в тренажере слепой печати BananaTyping.",
+    canonicalPath: id ? `/player/${id}` : undefined,
+    noIndex: Boolean(profile?.isPrivate || notFound),
+  });
 
   useEffect(() => {
     if (!id) return;

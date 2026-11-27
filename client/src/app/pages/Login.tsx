@@ -3,8 +3,13 @@ import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "../stores/userStore";
 import { BananaLogo } from "../components/BananaLogo";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 export function Login() {
+  usePageMeta({
+    title: "Вход — BananaTyping",
+    noIndex: true,
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   

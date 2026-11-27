@@ -33,6 +33,7 @@ import { BananaLogo } from "../components/BananaLogo";
 import { ProfileStatsSection } from "../components/profile/ProfileStatsSection";
 import { LogoutConfirmModal } from "../components/profile/LogoutConfirmModal";
 import { calculateAdvancedStats } from "../utils/typingStats";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 type ProfileTab = "analytics" | "history" | "settings";
 type HistoryLangFilter = "all" | "ru" | "en";
@@ -46,6 +47,11 @@ const MODE_LABELS: Record<string, string> = {
 };
 
 export function Profile() {
+  usePageMeta({
+    title: "Личный кабинет — BananaTyping",
+    noIndex: true,
+  });
+
   const {
     currentUser,
     recentResults,

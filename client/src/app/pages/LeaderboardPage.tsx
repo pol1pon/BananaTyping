@@ -16,6 +16,7 @@ import {
 import { useLeaderboardStore, LeaderboardEntry } from "../stores/leaderboardStore";
 import { useAuthStore } from "../stores/userStore";
 import { UserAvatar } from "../components/UserAvatar";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 // Резервный список лидеров для демонстрации, если в базе еще мало записей
 const FALLBACK_LEADERS: LeaderboardEntry[] = [
@@ -30,6 +31,13 @@ const FALLBACK_LEADERS: LeaderboardEntry[] = [
 ];
 
 export function LeaderboardPage() {
+  usePageMeta({
+    title: "Таблица лидеров WPM — BananaTyping | Топ игроков",
+    description:
+      "Рейтинг лучших игроков BananaTyping по скорости слепой печати (WPM) и точности за 24 часа и за всё время.",
+    canonicalPath: "/leaderboard",
+  });
+
   const { entries, isLoading, fetchLeaderboard } = useLeaderboardStore();
   const { currentUser } = useAuthStore();
 

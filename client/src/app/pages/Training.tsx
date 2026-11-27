@@ -28,6 +28,7 @@ import {
   type TimeLimit 
 } from "../components/training/AiGeneratorBar";
 import { areCharsEqual, isDashChar } from "../utils/charMatching";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 const KEYBOARDS: Record<'ru' | 'en', string[][]> = {
   ru: [
@@ -150,6 +151,13 @@ const STREAMING_SENTENCES: Record<'ru' | 'en', string[]> = {
 };
 
 export function Training() {
+  usePageMeta({
+    title: "Тренировка слепой печати — BananaTyping | ИИ-генерация текстов",
+    description:
+      "Практикуйте скоропечатание на русском и английском языках в BananaTyping: режимы на время, бесконечный поток, виртуальная клавиатура и ИИ-тексты.",
+    canonicalPath: "/training",
+  });
+
   const { currentUser, saveTypingResult } = useAuthStore();
   const { fetchLeaderboard } = useLeaderboardStore();
   const { 

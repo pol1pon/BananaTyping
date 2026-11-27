@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { useAuthStore, User } from "../stores/userStore";
 import { client } from "../stores/api-client";
 import { UserAvatar } from "../components/UserAvatar";
+import { usePageMeta } from "../hooks/usePageMeta";
 import {
   Shield,
   Users,
@@ -31,6 +32,11 @@ interface TextItem {
 }
 
 export function AdminDashboard() {
+  usePageMeta({
+    title: "Панель администратора — BananaTyping",
+    noIndex: true,
+  });
+
   const { currentUser, claimAdmin } = useAuthStore();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();

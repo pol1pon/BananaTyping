@@ -3,20 +3,68 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <title>BananaTyping — Современный тренажер слепой печати</title>
-    
-    <!-- Фавикон и иконки приложения -->
+    <title>BananaTyping — Тренажер слепой печати онлайн | Тест скорости печати</title>
+
+    <!-- Основные SEO-теги -->
+    <meta
+      name="description"
+      content="BananaTyping — бесплатный онлайн-тренажер слепой печати с ИИ-генерацией текстов на русском и английском. Измеряйте скорость (WPM), точность и соревнуйтесь в таблице лидеров."
+    />
+    <meta
+      name="keywords"
+      content="BananaTyping, banana typing, банана тайпинг, тренажер слепой печати, скоропечатание онлайн, тест скорости печати, клавиатурный тренажер, WPM тест, печать вслепую, typing test, touch typing"
+    />
+    <meta name="author" content="BananaTyping" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://67monster.pro/" />
+
+    <!-- Фавикон, манифест и иконки приложения -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20261125" />
     <link rel="shortcut icon" type="image/svg+xml" href="/favicon.svg?v=20261125" />
     <link rel="apple-touch-icon" href="/favicon.svg?v=20261125" />
+    <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#FFD700" />
-    
-    <!-- Мета-описание для поисковиков и соцсетей -->
-    <meta name="description" content="BananaTyping — интеллектуальный тренажер слепой печати с умной ИИ-генерацией текстов, режимами на время и бесконечным потоком." />
-    <meta property="og:title" content="BananaTyping — Современный тренажер слепой печати" />
-    <meta property="og:description" content="Учись печатать быстро и без ошибок с помощью умной ИИ-генерации текстов и соревновательного лидерборда." />
+
+    <!-- Open Graph для соцсетей и мессенджеров -->
+    <meta property="og:site_name" content="BananaTyping" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:url" content="https://67monster.pro/" />
+    <meta property="og:title" content="BananaTyping — Тренажер слепой печати онлайн" />
+    <meta
+      property="og:description"
+      content="Прокачай скоропечатание с BananaTyping: умная ИИ-генерация текстов, аналитика скорости (WPM) и рейтинг лидеров."
+    />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/favicon.svg?v=20261125" />
+    <meta property="og:image" content="https://67monster.pro/favicon.svg?v=20261125" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="BananaTyping — Тренажер слепой печати онлайн" />
+    <meta
+      name="twitter:description"
+      content="Бесплатный тренажер слепой печати с ИИ-генерацией текстов, тестом WPM и таблицей лидеров."
+    />
+    <meta name="twitter:image" content="https://67monster.pro/favicon.svg?v=20261125" />
+
+    <!-- Структурированные данные Schema.org (JSON-LD) для Google -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "BananaTyping",
+        "alternateName": ["Banana Typing", "БананаТайпинг", "BananaTyping Trainer"],
+        "url": "https://67monster.pro/",
+        "description": "Интерактивный онлайн-тренажер слепой печати с ИИ-генерацией текстов, аналитикой скорости (WPM), точности и таблицей лидеров.",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web",
+        "inLanguage": ["ru", "en"],
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
 
     <style>
       html, body {
@@ -34,6 +82,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <main style="max-width:720px;margin:40px auto;padding:20px;font-family:sans-serif;">
+        <h1>BananaTyping — Тренажер слепой печати онлайн</h1>
+        <p>Тренируйте скорость печати (WPM) и точность на русском и английском языках с помощью ИИ-генерации текстов и таблицы лидеров.</p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

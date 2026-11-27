@@ -3,8 +3,15 @@ import { TrainerCard } from "../components/TrainerCard";
 import { ProgressWidget } from "../components/ProgressWidget";
 import { LeaderboardWidget } from "../components/LeaderboardWidget";
 import { Sparkles, Trophy, Keyboard } from "lucide-react";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 export function Home() {
+  usePageMeta({
+    title: "BananaTyping — Тренажер слепой печати онлайн | Тест скорости печати",
+    description:
+      "BananaTyping — онлайн-тренажер слепой печати с ИИ-генерацией текстов, тестом скорости (WPM), аналитикой прогресса и таблицей лидеров.",
+    canonicalPath: "/",
+  });
   return (
     <div className="w-full">
       {/* Темный Hero-блок со скруглением в стиле спецификации */}

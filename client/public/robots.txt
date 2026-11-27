@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Allow: /training
+Allow: /leaderboard
+Allow: /player/
+
+Disallow: /admin
+Disallow: /profile
+Disallow: /login
+Disallow: /register
+Disallow: /auth/
+Disallow: /users/
+Disallow: /leaderboards/
+Disallow: /texts/
+Disallow: /api
+
+Sitemap: https://67monster.pro/sitemap.xml
